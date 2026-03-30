@@ -15,33 +15,37 @@ const BottomNav = () => {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 glass border-t border-white/30 pb-safe">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/20 pb-safe" style={{
+      background: "rgba(255,255,255,0.75)",
+      backdropFilter: "blur(24px) saturate(200%)",
+      WebkitBackdropFilter: "blur(24px) saturate(200%)",
+    }}>
+      <div className="flex items-center justify-around h-[62px] max-w-lg mx-auto px-1">
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.path;
           return (
             <button
               key={tab.path}
               onClick={() => navigate(tab.path)}
-              className="relative flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all"
+              className="relative flex flex-col items-center justify-center w-[56px] h-[52px] rounded-2xl transition-all"
             >
               {isActive && (
                 <motion.div
-                  layoutId="tab-indicator"
-                  className="absolute inset-0 gradient-primary rounded-2xl opacity-10"
+                  layoutId="tab-bg"
+                  className="absolute inset-0 rounded-2xl gradient-primary opacity-[0.08]"
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
-              <tab.icon
-                className={`w-5 h-5 transition-colors ${
-                  isActive ? "text-primary" : "text-muted-foreground"
-                }`}
-              />
-              <span
-                className={`text-[10px] mt-0.5 font-medium transition-colors ${
-                  isActive ? "text-primary" : "text-muted-foreground"
-                }`}
-              >
+              <div className={`relative transition-all ${isActive ? "scale-110" : ""}`}>
+                <tab.icon className={`w-[22px] h-[22px] transition-colors ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                {isActive && (
+                  <motion.div
+                    layoutId="tab-dot"
+                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary"
+                  />
+                )}
+              </div>
+              <span className={`text-[9px] mt-0.5 font-semibold transition-colors ${isActive ? "text-primary" : "text-muted-foreground"}`}>
                 {tab.label}
               </span>
             </button>
