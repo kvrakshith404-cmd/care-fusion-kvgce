@@ -108,9 +108,9 @@ const ChatBubble = () => {
                         : "glass-card text-foreground rounded-bl-md"
                     }`}
                   >
-                    <ReactMarkdown className="prose prose-sm max-w-none [&>p]:m-0 [&>ul]:m-0">
-                      {msg.content}
-                    </ReactMarkdown>
+                    <div className="prose prose-sm max-w-none [&>p]:m-0 [&>ul]:m-0">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
                   </div>
                   {msg.role === "user" && (
                     <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center shrink-0 mt-1">
