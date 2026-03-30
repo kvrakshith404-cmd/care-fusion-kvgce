@@ -1,51 +1,159 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot, User } from "lucide-react";
+import { MessageCircle, X, Send, Bot, User, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 
 type Message = { role: "user" | "assistant"; content: string };
 
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+
 const ChatBubble = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Hi! I'm your Care Fusion AI assistant. How can I help you with your health today?\n\n⚠️ *This is not a medical diagnosis.*" },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+
+  // Load chat history from DB
+  useEffect(() => {
+    if (!user) {
+      setMessages([]);
+      return;
+    }
+    const loadHistory = async () => {
+      const { data } = await supabase
+        .from("chat_history")
+        .select("message, role")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true })
+        .limit(50);
+      if (data && data.length > 0) {
+        setMessages(data.map((d) => ({ role: d.role as "user" | "assistant", content: d.message })));
+      } else {
+        setMessages([
+          { role: "assistant", content: "Hi! I'm your Care Fusion AI assistant. How can I help you today?\n\n⚠️ *This is not a medical diagnosis.*" },
+        ]);
+      }
+    };
+    loadHistory();
+  }, [user]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
+
+  const saveMessage = async (msg: Message) => {
+    if (!user) return;
+    await supabase.from("chat_history").insert({
+      user_id: user.id,
+      message: msg.content,
+      role: msg.role,
+    });
+  };
+
+  const clearChat = async () => {
+    if (!user) return;
+    await supabase.from("chat_history").delete().eq("user_id", user.id);
+    setMessages([
+      { role: "assistant", content: "Chat cleared! How can I help you?\n\n⚠️ *This is not a medical diagnosis.*" },
+    ]);
+  };
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
+
+    if (!user) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: input.trim() },
+        { role: "assistant", content: "Please sign in to use the AI chat assistant." },
+      ]);
+      setInput("");
+      return;
+    }
+
     const userMsg: Message = { role: "user", content: input.trim() };
-    setMessages((prev) => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInput("");
     setIsLoading(true);
 
-    // Simulated AI response — will be replaced with Lovable AI once Cloud is enabled
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Thanks for your message! AI chat will be fully functional once the backend is connected. For now, I'm here as a preview.\n\n⚠️ *This is not a medical diagnosis.*",
+    await saveMessage(userMsg);
+
+    let assistantSoFar = "";
+    const upsertAssistant = (chunk: string) => {
+      assistantSoFar += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && prev.length === updatedMessages.length + 1) {
+          return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
+        }
+        return [...prev, { role: "assistant", content: assistantSoFar }];
+      });
+    };
+
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-      ]);
+        body: JSON.stringify({ messages: updatedMessages }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to get response");
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) upsertAssistant(content);
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Save final assistant message
+      if (assistantSoFar) {
+        await saveMessage({ role: "assistant", content: assistantSoFar });
+      }
+    } catch (e: any) {
+      upsertAssistant("Sorry, I couldn't process that. " + (e.message || "Please try again."));
+    } finally {
       setIsLoading(false);
-    }, 1200);
+    }
   };
 
   return (
     <>
-      {/* Floating Bubble */}
       <AnimatePresence>
         {!isOpen && (
           <motion.button
@@ -61,7 +169,6 @@ const ChatBubble = () => {
         )}
       </AnimatePresence>
 
-      {/* Chat Modal */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -71,7 +178,6 @@ const ChatBubble = () => {
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className="fixed inset-x-2 bottom-20 top-16 z-50 flex flex-col rounded-3xl overflow-hidden glass-card shadow-2xl border border-white/40 max-w-lg mx-auto"
           >
-            {/* Header */}
             <div className="gradient-primary px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
@@ -79,15 +185,23 @@ const ChatBubble = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-primary-foreground">Care Fusion AI</h3>
-                  <p className="text-[10px] text-primary-foreground/70">Always here to help</p>
+                  <p className="text-[10px] text-primary-foreground/70">
+                    {user ? "Remembers your conversations" : "Sign in for memory"}
+                  </p>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <X className="w-4 h-4 text-primary-foreground" />
-              </button>
+              <div className="flex gap-1">
+                {user && (
+                  <button onClick={clearChat} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                    <Trash2 className="w-4 h-4 text-primary-foreground" />
+                  </button>
+                )}
+                <button onClick={() => setIsOpen(false)} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <X className="w-4 h-4 text-primary-foreground" />
+                </button>
+              </div>
             </div>
 
-            {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3 bg-background/50">
               {messages.map((msg, i) => (
                 <motion.div
@@ -135,16 +249,12 @@ const ChatBubble = () => {
               )}
             </div>
 
-            {/* Input */}
             <div className="p-3 border-t border-border bg-background/80 backdrop-blur-xl">
-              <form
-                onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
-                className="flex gap-2"
-              >
+              <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask me anything about health..."
+                  placeholder={user ? "Ask me anything about health..." : "Sign in to chat..."}
                   className="rounded-full bg-secondary/50 border-0 focus-visible:ring-primary"
                 />
                 <Button
