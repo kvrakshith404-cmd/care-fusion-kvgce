@@ -55,6 +55,7 @@ const MapView = () => {
             open: p.opening_hours?.open_now ?? null,
             lat: p.geometry?.location?.lat || lat,
             lng: p.geometry?.location?.lng || lng,
+            phone: p.phone || null,
           }))
         );
       }
