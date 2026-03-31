@@ -128,6 +128,32 @@ const Index = () => {
         ))}
       </div>
 
+      {/* Find Hospitals Banner */}
+      <div className="px-5 mt-5">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => navigate("/map")}
+          className="relative glass-card-hover rounded-3xl p-4 cursor-pointer overflow-hidden"
+        >
+          <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-red-500/15 to-pink-400/10" />
+          <div className="flex items-center gap-3.5 relative">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-pink-400 flex items-center justify-center shadow-lg shrink-0">
+              <MapPin className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-foreground">Find Nearby Hospitals</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Real-time location • Ratings • Navigate instantly</p>
+            </div>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-red-500/10 to-pink-400/10 flex items-center justify-center shrink-0">
+              <Navigation className="w-4 h-4 text-red-500" />
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
       {/* Quick Actions */}
       <div className="px-5 mt-6">
         <div className="flex items-center justify-between mb-3">
