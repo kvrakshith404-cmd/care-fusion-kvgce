@@ -17,23 +17,46 @@ serve(async (req) => {
       });
     }
 
-    const GOOGLE_MAPS_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
-    if (!GOOGLE_MAPS_API_KEY) {
-      throw new Error("GOOGLE_MAPS_API_KEY is not configured");
+    // Use OpenStreetMap Overpass API (free, no key needed)
+    const overpassQuery = `
+      [out:json][timeout:10];
+      (
+        node["amenity"="hospital"](around:${radius},${lat},${lng});
+        way["amenity"="hospital"](around:${radius},${lat},${lng});
+        relation["amenity"="hospital"](around:${radius},${lat},${lng});
+      );
+      out center body 20;
+    `;
+
+    const resp = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `data=${encodeURIComponent(overpassQuery)}`,
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Overpass API returned ${resp.status}`);
     }
 
-    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=hospital&key=${GOOGLE_MAPS_API_KEY}`;
-    const resp = await fetch(url);
     const data = await resp.json();
 
-    if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-      console.error("Places API error:", data.status, data.error_message);
-      return new Response(JSON.stringify({ error: "Google Places API error", details: data.error_message }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const results = (data.elements || []).map((el: any) => {
+      const elLat = el.lat ?? el.center?.lat ?? lat;
+      const elLng = el.lon ?? el.center?.lon ?? lng;
+      return {
+        name: el.tags?.name || el.tags?.["name:en"] || "Hospital",
+        vicinity: [el.tags?.["addr:street"], el.tags?.["addr:city"], el.tags?.["addr:state"]]
+          .filter(Boolean).join(", ") || el.tags?.address || "",
+        rating: 0,
+        opening_hours: el.tags?.opening_hours ? { open_now: true } : null,
+        geometry: { location: { lat: elLat, lng: elLng } },
+        phone: el.tags?.phone || el.tags?.["contact:phone"] || null,
+        website: el.tags?.website || el.tags?.["contact:website"] || null,
+        emergency: el.tags?.emergency === "yes",
+      };
+    });
 
-    return new Response(JSON.stringify({ results: data.results || [] }), {
+    return new Response(JSON.stringify({ results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
