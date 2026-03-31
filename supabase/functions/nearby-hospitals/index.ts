@@ -17,23 +17,43 @@ serve(async (req) => {
       });
     }
 
-    const GOOGLE_MAPS_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
-    if (!GOOGLE_MAPS_API_KEY) {
-      throw new Error("GOOGLE_MAPS_API_KEY is not configured");
+    // Calculate bounding box from radius
+    const latDelta = (radius / 1000) / 111.32;
+    const lngDelta = (radius / 1000) / (111.32 * Math.cos((lat * Math.PI) / 180));
+    const viewbox = `${lng - lngDelta},${lat - latDelta},${lng + lngDelta},${lat + latDelta}`;
+
+    // Use Nominatim (free, no key) to search for hospitals nearby
+    const url = `https://nominatim.openstreetmap.org/search?` +
+      `q=hospital&format=json&limit=20&bounded=1&viewbox=${viewbox}` +
+      `&addressdetails=1&extratags=1`;
+
+    const resp = await fetch(url, {
+      headers: { "User-Agent": "CareFusion/1.0 (health-app)" },
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Nominatim API returned ${resp.status}`);
     }
 
-    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=hospital&key=${GOOGLE_MAPS_API_KEY}`;
-    const resp = await fetch(url);
     const data = await resp.json();
 
-    if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-      console.error("Places API error:", data.status, data.error_message);
-      return new Response(JSON.stringify({ error: "Google Places API error", details: data.error_message }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const results = (data || []).map((place: any) => ({
+      name: place.name || place.display_name?.split(",")[0] || "Hospital",
+      vicinity: place.display_name || "",
+      rating: 0,
+      opening_hours: place.extratags?.opening_hours ? { open_now: true } : null,
+      geometry: {
+        location: {
+          lat: parseFloat(place.lat),
+          lng: parseFloat(place.lon),
+        },
+      },
+      phone: place.extratags?.phone || place.extratags?.["contact:phone"] || null,
+      website: place.extratags?.website || place.extratags?.["contact:website"] || null,
+      emergency: place.extratags?.emergency === "yes",
+    }));
 
-    return new Response(JSON.stringify({ results: data.results || [] }), {
+    return new Response(JSON.stringify({ results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

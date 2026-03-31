@@ -11,6 +11,7 @@ type HospitalType = {
   open: boolean | null;
   lat: number;
   lng: number;
+  phone: string | null;
 };
 
 const MapView = () => {
@@ -54,6 +55,7 @@ const MapView = () => {
             open: p.opening_hours?.open_now ?? null,
             lat: p.geometry?.location?.lat || lat,
             lng: p.geometry?.location?.lng || lng,
+            phone: p.phone || null,
           }))
         );
       }
@@ -181,6 +183,13 @@ const MapView = () => {
                     className="flex-1 h-9 rounded-xl gradient-primary text-primary-foreground text-xs font-semibold glow-sm">
                     <Navigation className="w-3 h-3 mr-1" /> Navigate
                   </Button>
+                  {hospital.phone && (
+                    <Button size="sm" variant="outline"
+                      onClick={() => window.open(`tel:${hospital.phone}`, "_self")}
+                      className="h-9 rounded-xl text-xs font-semibold border-green-500/30 text-green-600">
+                      <Phone className="w-3 h-3 mr-1" /> Call
+                    </Button>
+                  )}
                   <Button size="sm" variant="outline"
                     onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(hospital.name)}`, "_blank")}
                     className="h-9 rounded-xl text-xs font-semibold border-primary/20">
