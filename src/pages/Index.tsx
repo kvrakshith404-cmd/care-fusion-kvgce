@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Activity, Heart, Pill, Calendar, Bell, Shield, Stethoscope, Brain, LogOut, Sparkles, TrendingUp, ChevronRight } from "lucide-react";
+import { Activity, Heart, Pill, Calendar, Bell, Shield, Stethoscope, Brain, LogOut, Sparkles, TrendingUp, ChevronRight, MapPin, Navigation } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
