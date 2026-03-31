@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Activity, Heart, Pill, Calendar, Bell, Shield, Stethoscope, Brain, LogOut, Sparkles, TrendingUp, ChevronRight } from "lucide-react";
+import { Activity, Heart, Pill, Calendar, Bell, Shield, Stethoscope, Brain, LogOut, Sparkles, TrendingUp, ChevronRight, MapPin, Navigation } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -9,7 +9,7 @@ const features = [
   { icon: Stethoscope, label: "AI Diagnosis", desc: "Smart health scan", color: "from-blue-500 to-cyan-400", path: "/health-hub" },
   { icon: Pill, label: "Med Scanner", desc: "Identify medicines", color: "from-emerald-500 to-teal-400", path: "/scanner" },
   { icon: Brain, label: "Mood Track", desc: "Music therapy", color: "from-violet-500 to-purple-400", path: "/mood" },
-  { icon: Activity, label: "Health Hub", desc: "AI-powered care", color: "from-orange-500 to-amber-400", path: "/health-hub" },
+  { icon: MapPin, label: "Hospitals", desc: "Find nearby", color: "from-red-500 to-pink-400", path: "/map" },
   { icon: Calendar, label: "Reminders", desc: "Never miss a dose", color: "from-pink-500 to-rose-400", path: "/" },
   { icon: Shield, label: "Emergency", desc: "Quick SOS", color: "from-red-500 to-orange-400", path: "/map" },
 ];
@@ -126,6 +126,32 @@ const Index = () => {
             <p className="text-[10px] text-muted-foreground font-medium">{stat.label}</p>
           </motion.div>
         ))}
+      </div>
+
+      {/* Find Hospitals Banner */}
+      <div className="px-5 mt-5">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => navigate("/map")}
+          className="relative glass-card-hover rounded-3xl p-4 cursor-pointer overflow-hidden"
+        >
+          <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-red-500/15 to-pink-400/10" />
+          <div className="flex items-center gap-3.5 relative">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-pink-400 flex items-center justify-center shadow-lg shrink-0">
+              <MapPin className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-foreground">Find Nearby Hospitals</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Real-time location • Ratings • Navigate instantly</p>
+            </div>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-red-500/10 to-pink-400/10 flex items-center justify-center shrink-0">
+              <Navigation className="w-4 h-4 text-red-500" />
+            </div>
+          </div>
+        </motion.div>
       </div>
 
       {/* Quick Actions */}
