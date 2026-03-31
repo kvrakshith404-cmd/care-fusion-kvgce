@@ -9,7 +9,7 @@ const features = [
   { icon: Stethoscope, label: "AI Diagnosis", desc: "Smart health scan", color: "from-blue-500 to-cyan-400", path: "/health-hub" },
   { icon: Pill, label: "Med Scanner", desc: "Identify medicines", color: "from-emerald-500 to-teal-400", path: "/scanner" },
   { icon: Brain, label: "Mood Track", desc: "Music therapy", color: "from-violet-500 to-purple-400", path: "/mood" },
-  { icon: Activity, label: "Health Hub", desc: "AI-powered care", color: "from-orange-500 to-amber-400", path: "/health-hub" },
+  { icon: MapPin, label: "Hospitals", desc: "Find nearby", color: "from-red-500 to-pink-400", path: "/map" },
   { icon: Calendar, label: "Reminders", desc: "Never miss a dose", color: "from-pink-500 to-rose-400", path: "/" },
   { icon: Shield, label: "Emergency", desc: "Quick SOS", color: "from-red-500 to-orange-400", path: "/map" },
 ];
