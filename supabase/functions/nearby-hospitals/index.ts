@@ -17,44 +17,41 @@ serve(async (req) => {
       });
     }
 
-    // Use OpenStreetMap Overpass API (free, no key needed)
-    const overpassQuery = `
-      [out:json][timeout:10];
-      (
-        node["amenity"="hospital"](around:${radius},${lat},${lng});
-        way["amenity"="hospital"](around:${radius},${lat},${lng});
-        relation["amenity"="hospital"](around:${radius},${lat},${lng});
-      );
-      out center body 20;
-    `;
+    // Calculate bounding box from radius
+    const latDelta = (radius / 1000) / 111.32;
+    const lngDelta = (radius / 1000) / (111.32 * Math.cos((lat * Math.PI) / 180));
+    const viewbox = `${lng - lngDelta},${lat - latDelta},${lng + lngDelta},${lat + latDelta}`;
 
-    const resp = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `data=${encodeURIComponent(overpassQuery)}`,
+    // Use Nominatim (free, no key) to search for hospitals nearby
+    const url = `https://nominatim.openstreetmap.org/search?` +
+      `q=hospital&format=json&limit=20&bounded=1&viewbox=${viewbox}` +
+      `&addressdetails=1&extratags=1`;
+
+    const resp = await fetch(url, {
+      headers: { "User-Agent": "CareFusion/1.0 (health-app)" },
     });
 
     if (!resp.ok) {
-      throw new Error(`Overpass API returned ${resp.status}`);
+      throw new Error(`Nominatim API returned ${resp.status}`);
     }
 
     const data = await resp.json();
 
-    const results = (data.elements || []).map((el: any) => {
-      const elLat = el.lat ?? el.center?.lat ?? lat;
-      const elLng = el.lon ?? el.center?.lon ?? lng;
-      return {
-        name: el.tags?.name || el.tags?.["name:en"] || "Hospital",
-        vicinity: [el.tags?.["addr:street"], el.tags?.["addr:city"], el.tags?.["addr:state"]]
-          .filter(Boolean).join(", ") || el.tags?.address || "",
-        rating: 0,
-        opening_hours: el.tags?.opening_hours ? { open_now: true } : null,
-        geometry: { location: { lat: elLat, lng: elLng } },
-        phone: el.tags?.phone || el.tags?.["contact:phone"] || null,
-        website: el.tags?.website || el.tags?.["contact:website"] || null,
-        emergency: el.tags?.emergency === "yes",
-      };
-    });
+    const results = (data || []).map((place: any) => ({
+      name: place.name || place.display_name?.split(",")[0] || "Hospital",
+      vicinity: place.display_name || "",
+      rating: 0,
+      opening_hours: place.extratags?.opening_hours ? { open_now: true } : null,
+      geometry: {
+        location: {
+          lat: parseFloat(place.lat),
+          lng: parseFloat(place.lon),
+        },
+      },
+      phone: place.extratags?.phone || place.extratags?.["contact:phone"] || null,
+      website: place.extratags?.website || place.extratags?.["contact:website"] || null,
+      emergency: place.extratags?.emergency === "yes",
+    }));
 
     return new Response(JSON.stringify({ results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
