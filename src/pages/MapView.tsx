@@ -11,6 +11,7 @@ type HospitalType = {
   open: boolean | null;
   lat: number;
   lng: number;
+  phone: string | null;
 };
 
 const MapView = () => {
