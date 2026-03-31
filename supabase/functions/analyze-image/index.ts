@@ -14,9 +14,14 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const prompt = type === "prescription"
-      ? "You are a medical OCR assistant. Analyze this prescription image and extract: medicine names, dosages, frequency, duration, and any special instructions. Format clearly with bullet points."
-      : "You are a medicine identification assistant. Analyze this medicine image and provide: medicine name, active ingredients, common uses, dosage information, side effects, and precautions. Format clearly with markdown.";
+    let prompt = "";
+    if (type === "prescription") {
+      prompt = "You are a medical OCR assistant. Analyze this prescription image and extract: medicine names, dosages, frequency, duration, and any special instructions. Format clearly with bullet points.";
+    } else if (type === "injury") {
+      prompt = "You are a first-aid and injury assessment assistant. Analyze this injury image and provide: type of injury identified, severity assessment, immediate first-aid steps, what NOT to do, and when to seek emergency care. Format clearly with markdown headers and bullet points.";
+    } else {
+      prompt = "You are a medicine identification assistant. Analyze this medicine image and provide: medicine name, active ingredients, common uses, dosage information, side effects, and precautions. Format clearly with markdown.";
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -31,7 +36,7 @@ serve(async (req) => {
           {
             role: "user",
             content: [
-              { type: "text", text: type === "prescription" ? "Please analyze this prescription:" : "Please identify this medicine:" },
+              { type: "text", text: type === "prescription" ? "Please analyze this prescription:" : type === "injury" ? "Please analyze this injury:" : "Please identify this medicine:" },
               { type: "image_url", image_url: { url: image } },
             ],
           },
@@ -43,8 +48,7 @@ serve(async (req) => {
       const t = await response.text();
       console.error("AI error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI analysis failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -57,8 +61,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("analyze-image error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
