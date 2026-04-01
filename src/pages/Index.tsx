@@ -1,40 +1,39 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Activity, Heart, Pill, Calendar, Bell, Shield, Stethoscope, Brain, LogOut, Sparkles, TrendingUp, ChevronRight, MapPin, Navigation } from "lucide-react";
+import { Activity, Heart, Pill, Shield, Stethoscope, Brain, LogOut, Sparkles, TrendingUp, ChevronRight, MapPin, Navigation } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
-
-const features = [
-  { icon: Stethoscope, label: "AI Diagnosis", desc: "Smart health scan", color: "from-blue-500 to-cyan-400", path: "/health-hub" },
-  { icon: Pill, label: "Med Scanner", desc: "Identify medicines", color: "from-emerald-500 to-teal-400", path: "/scanner" },
-  { icon: Brain, label: "Mood Track", desc: "Music therapy", color: "from-violet-500 to-purple-400", path: "/mood" },
-  { icon: MapPin, label: "Hospitals", desc: "Find nearby", color: "from-red-500 to-pink-400", path: "/map" },
-  { icon: Calendar, label: "Reminders", desc: "Never miss a dose", color: "from-pink-500 to-rose-400", path: "/" },
-  { icon: Shield, label: "Emergency", desc: "Quick SOS", color: "from-red-500 to-orange-400", path: "/map" },
-];
+import LanguageSelector from "@/components/LanguageSelector";
 
 const Index = () => {
   const { user, signOut } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("User");
-  const [moodLogs, setMoodLogs] = useState<any[]>([]);
-  const [greeting, setGreeting] = useState("Good morning");
+  const [greeting, setGreeting] = useState("goodMorning");
 
   useEffect(() => {
     const h = new Date().getHours();
-    setGreeting(h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening");
+    setGreeting(h < 12 ? "goodMorning" : h < 17 ? "goodAfternoon" : "goodEvening");
   }, []);
 
   useEffect(() => {
     if (!user) return;
     supabase.from("profiles").select("display_name").eq("user_id", user.id).single()
       .then(({ data }) => { if (data?.display_name) setDisplayName(data.display_name.split(" ")[0]); });
-    supabase.from("mood_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(3)
-      .then(({ data }) => { if (data) setMoodLogs(data); });
   }, [user]);
 
   const firstName = displayName || user?.email?.split("@")[0] || "User";
+
+  const features = [
+    { icon: Stethoscope, label: t("aiDiagnosis"), desc: t("smartHealthScan"), color: "from-blue-500 to-cyan-400", path: "/health-hub" },
+    { icon: Pill, label: t("medScanner"), desc: t("identifyMedicines"), color: "from-emerald-500 to-teal-400", path: "/scanner" },
+    { icon: Brain, label: t("moodTrack"), desc: t("musicTherapy"), color: "from-violet-500 to-purple-400", path: "/mood" },
+    { icon: MapPin, label: t("hospitals"), desc: t("findNearby"), color: "from-red-500 to-pink-400", path: "/map" },
+    { icon: Shield, label: t("emergency"), desc: t("quickSOS"), color: "from-red-500 to-orange-400", path: "/map" },
+  ];
 
   return (
     <div className="min-h-screen gradient-bg pb-24">
@@ -49,14 +48,11 @@ const Index = () => {
           className="relative flex items-center justify-between mb-5"
         >
           <div>
-            <p className="text-xs text-primary-foreground/60 font-medium">{greeting} 👋</p>
+            <p className="text-xs text-primary-foreground/60 font-medium">{t(greeting)} 👋</p>
             <h1 className="text-2xl font-extrabold text-primary-foreground tracking-tight">{firstName}</h1>
           </div>
           <div className="flex gap-2">
-            <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center relative">
-              <Bell className="w-5 h-5 text-primary-foreground" />
-              <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-400 border-2 border-primary" />
-            </div>
+            <LanguageSelector />
             <button onClick={signOut} className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center">
               <LogOut className="w-4 h-4 text-primary-foreground" />
             </button>
@@ -72,14 +68,14 @@ const Index = () => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[11px] text-primary-foreground/60 font-medium mb-1">Today's Health Score</p>
+              <p className="text-[11px] text-primary-foreground/60 font-medium mb-1">{t("todaysHealthScore")}</p>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-5xl font-extrabold text-primary-foreground">92</span>
                 <span className="text-sm text-primary-foreground/50 font-medium">/100</span>
               </div>
               <div className="flex items-center gap-1 mt-1">
                 <TrendingUp className="w-3 h-3 text-green-300" />
-                <span className="text-[11px] text-green-300 font-semibold">+3 from yesterday</span>
+                <span className="text-[11px] text-green-300 font-semibold">{t("fromYesterday")}</span>
               </div>
             </div>
             <div className="w-20 h-20 rounded-full border-[5px] border-white/20 flex items-center justify-center relative">
@@ -110,9 +106,9 @@ const Index = () => {
       {/* Stats Row */}
       <div className="flex gap-3 px-5 -mt-5">
         {[
-          { value: "98%", label: "Accuracy", icon: Heart, color: "text-red-400" },
-          { value: "24/7", label: "Available", icon: Bell, color: "text-primary" },
-          { value: "50+", label: "Features", icon: Activity, color: "text-accent" },
+          { value: "98%", label: t("accuracy"), icon: Heart, color: "text-red-400" },
+          { value: "24/7", label: t("available"), icon: Activity, color: "text-primary" },
+          { value: "50+", label: t("features"), icon: Activity, color: "text-accent" },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -144,8 +140,8 @@ const Index = () => {
               <MapPin className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-bold text-foreground">Find Nearby Hospitals</h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Real-time location • Ratings • Navigate instantly</p>
+              <h3 className="text-sm font-bold text-foreground">{t("findNearbyHospitals")}</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{t("findNearbyHospitalsDesc")}</p>
             </div>
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-red-500/10 to-pink-400/10 flex items-center justify-center shrink-0">
               <Navigation className="w-4 h-4 text-red-500" />
@@ -157,8 +153,8 @@ const Index = () => {
       {/* Quick Actions */}
       <div className="px-5 mt-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold text-foreground">Quick Actions</h2>
-          <span className="text-[11px] text-primary font-semibold">View all</span>
+          <h2 className="text-base font-bold text-foreground">{t("quickActions")}</h2>
+          <span className="text-[11px] text-primary font-semibold">{t("viewAll")}</span>
         </div>
         <div className="grid grid-cols-3 gap-2.5">
           {features.map((feature, i) => (
@@ -176,42 +172,6 @@ const Index = () => {
               </div>
               <h3 className="text-[11px] font-bold text-foreground leading-tight">{feature.label}</h3>
               <p className="text-[9px] text-muted-foreground mt-0.5">{feature.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="px-5 mt-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold text-foreground">Recent Activity</h2>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-        </div>
-        <div className="space-y-2.5">
-          {(moodLogs.length > 0 ? moodLogs.map((log) => ({
-            title: "Mood Check-in",
-            desc: `Feeling ${log.mood} ${log.mood === "Happy" ? "😊" : log.mood === "Calm" ? "😌" : log.mood === "Stressed" ? "😰" : "💭"}`,
-            time: new Date(log.created_at).toLocaleDateString(),
-            icon: Heart,
-            gradient: "from-pink-500 to-rose-400",
-          })) : [
-            { title: "Welcome!", desc: "Start by checking your mood", time: "Now", icon: Sparkles, gradient: "from-primary to-accent" },
-          ]).map((item, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.55 + i * 0.08 }}
-              className="glass-card rounded-2xl p-3.5 flex items-center gap-3"
-            >
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center shrink-0 shadow-md`}>
-                <item.icon className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
-              </div>
-              <span className="text-[10px] text-muted-foreground shrink-0 font-medium">{item.time}</span>
             </motion.div>
           ))}
         </div>
