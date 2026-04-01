@@ -1,18 +1,20 @@
 import { Home, Pill, Smile, Stethoscope, MapPin } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-
-const tabs = [
-  { path: "/", icon: Home, label: "Home" },
-  { path: "/scanner", icon: Pill, label: "Scanner" },
-  { path: "/mood", icon: Smile, label: "Mood" },
-  { path: "/health-hub", icon: Stethoscope, label: "AI Hub" },
-  { path: "/map", icon: MapPin, label: "Map" },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
+
+  const tabs = [
+    { path: "/", icon: Home, label: t("home") },
+    { path: "/scanner", icon: Pill, label: t("scanner") },
+    { path: "/mood", icon: Smile, label: t("mood") },
+    { path: "/health-hub", icon: Stethoscope, label: t("aiHub") },
+    { path: "/map", icon: MapPin, label: t("map") },
+  ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/20 pb-safe" style={{
