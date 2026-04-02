@@ -16,12 +16,11 @@ const languages: { value: Language; label: string; flag: string }[] = [
 
 const LanguageSelector = () => {
   const { language, setLanguage } = useLanguage();
-  const currentLang = languages.find((l) => l.value === language);
 
   return (
     <Select value={language} onValueChange={(val) => setLanguage(val as Language)}>
       <SelectTrigger className="w-10 h-10 rounded-2xl bg-white/15 border-0 flex items-center justify-center p-0 [&>svg]:hidden">
-        <span className="text-lg leading-none">{currentLang?.flag}</span>
+        <Globe className="w-5 h-5 text-primary-foreground" />
       </SelectTrigger>
       <SelectContent className="min-w-[140px]">
         {languages.map((lang) => (
