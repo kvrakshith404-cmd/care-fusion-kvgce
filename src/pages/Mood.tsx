@@ -123,7 +123,7 @@ const Mood = () => {
     const enLabel = moodMeta[key].enLabel;
     const allSongs = songDB[enLabel] || [];
     const shuffled = [...allSongs].sort(() => Math.random() - 0.5);
-    setSongs(shuffled.slice(0, 4));
+    setSongs(shuffled.slice(0, 5));
 
     if (user) {
       const { error } = await supabase.from("mood_logs").insert({
