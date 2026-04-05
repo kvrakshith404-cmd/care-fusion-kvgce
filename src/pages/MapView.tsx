@@ -13,6 +13,16 @@ type HospitalType = {
   lat: number;
   lng: number;
   phone: string | null;
+  emergency: boolean;
+  website: string | null;
+};
+
+const getDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
 const MapView = () => {
@@ -41,12 +51,25 @@ const MapView = () => {
       const { data, error } = await supabase.functions.invoke("nearby-hospitals", { body: { lat, lng, radius: 5000 } });
       if (error) throw error;
       if (data?.results) {
-        setHospitals(data.results.map((p: any) => ({
+        const mapped = data.results.map((p: any) => ({
           name: p.name, vicinity: p.vicinity || p.formatted_address || "",
           rating: p.rating || 0, open: p.opening_hours?.open_now ?? null,
           lat: p.geometry?.location?.lat || lat, lng: p.geometry?.location?.lng || lng,
           phone: p.phone || null,
-        })));
+          emergency: p.emergency || false,
+          website: p.website || null,
+        }));
+        // Sort: nearest first, then by facilities (emergency, phone, website, open)
+        mapped.sort((a: any, b: any) => {
+          const distA = getDistanceKm(a.lat, a.lng, lat, lng);
+          const distB = getDistanceKm(b.lat, b.lng, lat, lng);
+          const facA = (a.emergency ? 3 : 0) + (a.phone ? 1 : 0) + (a.website ? 1 : 0) + (a.open ? 1 : 0);
+          const facB = (b.emergency ? 3 : 0) + (b.phone ? 1 : 0) + (b.website ? 1 : 0) + (b.open ? 1 : 0);
+          // Primary: distance, Secondary: more facilities first
+          if (Math.abs(distA - distB) < 0.3) return facB - facA;
+          return distA - distB;
+        });
+        setHospitals(mapped);
       }
     } catch { setLocationError(t("couldNotFetch")); } finally { setLoadingHospitals(false); }
   };
