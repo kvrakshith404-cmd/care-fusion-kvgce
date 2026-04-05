@@ -76,11 +76,7 @@ const MapView = () => {
 
   const getDistance = (hLat: number, hLng: number) => {
     if (!userLocation) return "";
-    const R = 6371;
-    const dLat = ((hLat - userLocation.lat) * Math.PI) / 180;
-    const dLng = ((hLng - userLocation.lng) * Math.PI) / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos((userLocation.lat * Math.PI) / 180) * Math.cos((hLat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-    const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = getDistanceKm(hLat, hLng, userLocation.lat, userLocation.lng);
     return d < 1 ? `${Math.round(d * 1000)} m` : `${d.toFixed(1)} km`;
   };
 
