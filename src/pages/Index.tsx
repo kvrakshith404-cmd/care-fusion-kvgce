@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Activity, Heart, Pill, Shield, Stethoscope, Brain, LogOut, Sparkles, TrendingUp, ChevronRight, MapPin, Navigation } from "lucide-react";
+import { Activity, Heart, Pill, Shield, Stethoscope, Brain, User, Sparkles, TrendingUp, ChevronRight, MapPin, Navigation } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import LanguageSelector from "@/components/LanguageSelector";
 
 const Index = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("User");
@@ -53,8 +53,8 @@ const Index = () => {
           </div>
           <div className="flex gap-2">
             <LanguageSelector />
-            <button onClick={signOut} className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center">
-              <LogOut className="w-4 h-4 text-primary-foreground" />
+            <button onClick={() => navigate("/profile")} className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center">
+              <User className="w-4 h-4 text-primary-foreground" />
             </button>
           </div>
         </motion.div>

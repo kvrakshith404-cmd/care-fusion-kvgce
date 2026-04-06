@@ -11,6 +11,7 @@ import Mood from "./pages/Mood";
 import HealthHub from "./pages/HealthHub";
 import MapView from "./pages/MapView";
 import Auth from "./pages/Auth";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import BottomNav from "./components/BottomNav";
 import ChatBubble from "./components/ChatBubble";
@@ -42,6 +43,7 @@ const AppRoutes = () => {
         <Route path="/mood" element={<ProtectedRoute><Mood /></ProtectedRoute>} />
         <Route path="/health-hub" element={<ProtectedRoute><HealthHub /></ProtectedRoute>} />
         <Route path="/map" element={<ProtectedRoute><MapView /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       {user && <BottomNav />}
