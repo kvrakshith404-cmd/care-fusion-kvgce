@@ -169,6 +169,15 @@ const translations: Record<Language, Record<string, string>> = {
     sorryError: "Sorry, I couldn't process that. Please try again.",
     // Language
     language: "Language",
+    profile: "Profile",
+    editProfile: "Edit Profile",
+    displayName: "Display Name",
+    enterDisplayName: "Enter your display name",
+    saveChanges: "Save Changes",
+    profileUpdated: "Profile updated!",
+    signOut: "Sign Out",
+    continueWithGoogle: "Continue with Google",
+    or: "OR",
   },
   hi: {
     goodMorning: "सुप्रभात",
