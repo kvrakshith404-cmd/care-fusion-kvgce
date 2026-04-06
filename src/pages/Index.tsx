@@ -53,8 +53,8 @@ const Index = () => {
           </div>
           <div className="flex gap-2">
             <LanguageSelector />
-            <button onClick={signOut} className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center">
-              <LogOut className="w-4 h-4 text-primary-foreground" />
+            <button onClick={() => navigate("/profile")} className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center">
+              <User className="w-4 h-4 text-primary-foreground" />
             </button>
           </div>
         </motion.div>
