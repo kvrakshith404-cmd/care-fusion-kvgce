@@ -99,6 +99,12 @@ const translations: Record<Language, Record<string, string>> = {
     loved: "Loved",
     sick: "Sick",
     excited: "Excited",
+    allLanguages: "All",
+    english: "English",
+    hindi: "Hindi",
+    kannada: "Kannada",
+    marathi: "Marathi",
+    filterByLanguage: "Filter by language",
     // Health Hub
     aiHealthHub: "AI Health Hub",
     healthHubDesc: "Intelligent health analysis powered by AI",
