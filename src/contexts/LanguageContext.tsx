@@ -501,6 +501,15 @@ const translations: Record<Language, Record<string, string>> = {
     signInToUseChat: "AI ಚಾಟ್ ಸಹಾಯಕವನ್ನು ಬಳಸಲು ದಯವಿಟ್ಟು ಸೈನ್ ಇನ್ ಮಾಡಿ.",
     sorryError: "ಕ್ಷಮಿಸಿ, ನಾನು ಅದನ್ನು ಪ್ರಕ್ರಿಯೆಗೊಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
     language: "ಭಾಷೆ",
+    profile: "ಪ್ರೊಫೈಲ್",
+    editProfile: "ಪ್ರೊಫೈಲ್ ಸಂಪಾದಿಸಿ",
+    displayName: "ಪ್ರದರ್ಶನ ಹೆಸರು",
+    enterDisplayName: "ನಿಮ್ಮ ಪ್ರದರ್ಶನ ಹೆಸರನ್ನು ನಮೂದಿಸಿ",
+    saveChanges: "ಬದಲಾವಣೆಗಳನ್ನು ಉಳಿಸಿ",
+    profileUpdated: "ಪ್ರೊಫೈಲ್ ನವೀಕರಿಸಲಾಗಿದೆ!",
+    signOut: "ಸೈನ್ ಔಟ್",
+    continueWithGoogle: "Google ನೊಂದಿಗೆ ಮುಂದುವರಿಸಿ",
+    or: "ಅಥವಾ",
   },
 };
 
