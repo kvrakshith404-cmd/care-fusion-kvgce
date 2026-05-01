@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Music, Play, X, CheckCircle, Sparkles, Filter, Loader2 } from "lucide-react";
+import { Music, Play, Pause, X, CheckCircle, Sparkles, Filter, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +37,9 @@ const Mood = () => {
   const [playing, setPlaying] = useState<Song | null>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const ytPlayerRef = useRef<any>(null);
+  const ytContainerRef = useRef<HTMLDivElement>(null);
   const resolveSeq = useRef(0);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -96,7 +99,64 @@ const Mood = () => {
   const playSong = (song: Song) => {
     // Force remount even if same song re-tapped
     setPlaying(null);
+    setIsPaused(false);
     setTimeout(() => setPlaying(song), 30);
+  };
+
+  // Load YouTube IFrame API once
+  useEffect(() => {
+    if ((window as any).YT) return;
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(tag);
+  }, []);
+
+  // Create / replace YT player when videoId changes
+  useEffect(() => {
+    if (!videoId) return;
+    let cancelled = false;
+
+    const create = () => {
+      if (cancelled || !ytContainerRef.current) return;
+      // Destroy previous
+      try { ytPlayerRef.current?.destroy?.(); } catch {}
+      ytPlayerRef.current = new (window as any).YT.Player(ytContainerRef.current, {
+        videoId,
+        playerVars: { autoplay: 1, controls: 0, playsinline: 1, modestbranding: 1, rel: 0 },
+        events: {
+          onReady: (e: any) => {
+            try { e.target.playVideo(); } catch {}
+            setIsPaused(false);
+          },
+          onStateChange: (e: any) => {
+            // 1 = playing, 2 = paused, 0 = ended
+            if (e.data === 2) setIsPaused(true);
+            else if (e.data === 1) setIsPaused(false);
+          },
+        },
+      });
+    };
+
+    const wait = setInterval(() => {
+      if ((window as any).YT?.Player) {
+        clearInterval(wait);
+        create();
+      }
+    }, 60);
+
+    return () => {
+      cancelled = true;
+      clearInterval(wait);
+      try { ytPlayerRef.current?.destroy?.(); } catch {}
+      ytPlayerRef.current = null;
+    };
+  }, [videoId]);
+
+  const togglePlay = () => {
+    const p = ytPlayerRef.current;
+    if (!p) return;
+    if (isPaused) p.playVideo?.();
+    else p.pauseVideo?.();
   };
 
   return (
@@ -210,31 +270,36 @@ const Mood = () => {
               </button>
             </div>
             {/* Audio-only: render YouTube iframe but clip video, keeping audio playing */}
-            <div className="relative w-full h-14 overflow-hidden rounded-xl bg-muted flex items-center justify-center">
-              {resolving && (
-                <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="relative w-full h-14 rounded-xl bg-muted flex items-center justify-between px-3 overflow-hidden">
+              {resolving ? (
+                <div className="flex items-center gap-2 text-muted-foreground mx-auto">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="text-[11px] font-semibold">Loading audio...</span>
                 </div>
-              )}
-              {!resolving && !videoId && (
-                <span className="text-[11px] font-semibold text-destructive">Couldn't load audio</span>
-              )}
-              {videoId && (
+              ) : !videoId ? (
+                <span className="text-[11px] font-semibold text-destructive mx-auto">Couldn't load audio</span>
+              ) : (
                 <>
-                  <iframe
-                    key={videoId}
-                    src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&controls=1&modestbranding=1&rel=0&playsinline=1`}
-                    className="absolute left-0 w-full"
-                    style={{ top: "-80px", height: "240px" }}
-                    allow="autoplay; encrypted-media; picture-in-picture"
-                    title={playing.name}
-                  />
-                  <div className="absolute inset-x-0 top-0 h-14 pointer-events-none flex items-center justify-center">
-                    <span className="text-[10px] font-semibold text-muted-foreground bg-background/60 px-2 py-0.5 rounded-full">🎵 Now playing</span>
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                    </span>
+                    <span className="text-[11px] font-bold text-foreground">🎵 {isPaused ? "Paused" : "Now playing"}</span>
                   </div>
+                  <button
+                    onClick={togglePlay}
+                    className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shadow-md active:scale-95 transition"
+                    aria-label={isPaused ? "Play" : "Pause"}
+                  >
+                    {isPaused ? <Play className="w-4 h-4 text-primary-foreground fill-primary-foreground" /> : <Pause className="w-4 h-4 text-primary-foreground fill-primary-foreground" />}
+                  </button>
                 </>
               )}
+            </div>
+            {/* Hidden YT player (audio-only). Kept off-screen so video never shows. */}
+            <div style={{ position: "fixed", left: "-9999px", top: "-9999px", width: 1, height: 1, overflow: "hidden", pointerEvents: "none" }}>
+              <div ref={ytContainerRef} />
             </div>
           </motion.div>
         )}
