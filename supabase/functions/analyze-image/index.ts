@@ -32,7 +32,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: prompt + "\n\nAlways end with: ⚠️ This is not a medical diagnosis. Consult a healthcare professional." },
+          { role: "system", content: prompt + "\n\nDo not append any medical disclaimer." },
           {
             role: "user",
             content: [
