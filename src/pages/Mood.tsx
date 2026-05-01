@@ -63,8 +63,9 @@ const Mood = () => {
   const displaySongs = filteredSongs.slice(0, 6);
 
   const buildYouTubeEmbed = (song: Song) => {
-    const q = encodeURIComponent(`${song.name} ${song.artist} official audio`);
-    return `https://www.youtube.com/embed?listType=search&list=${q}&autoplay=1`;
+    const q = encodeURIComponent(`${song.name} ${song.artist} audio`);
+    // controls=1 keeps play controls; we visually hide the video frame below
+    return `https://www.youtube.com/embed?listType=search&list=${q}&autoplay=1&controls=1&modestbranding=1`;
   };
 
   return (
@@ -177,15 +178,21 @@ const Mood = () => {
                 <X className="w-4 h-4 text-foreground" />
               </button>
             </div>
-            <iframe
-              key={playing.name + playing.artist}
-              src={buildYouTubeEmbed(playing)}
-              className="w-full rounded-xl"
-              height="80"
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              title={playing.name}
-            />
+            {/* Audio-only: render YouTube iframe but clip video, keeping audio playing */}
+            <div className="relative w-full h-12 overflow-hidden rounded-xl bg-muted">
+              <iframe
+                key={playing.name + playing.artist}
+                src={buildYouTubeEmbed(playing)}
+                className="absolute left-0 w-full"
+                style={{ top: "-90px", height: "240px", pointerEvents: "auto" }}
+                allow="autoplay; encrypted-media"
+                title={playing.name}
+              />
+              <div className="absolute inset-x-0 top-0 h-12 pointer-events-none flex items-center justify-center">
+                <span className="text-[10px] font-semibold text-muted-foreground">🎵 Now playing audio</span>
+              </div>
+            </div>
+            <p className="text-[9px] text-muted-foreground text-center mt-1">Tap play if audio doesn't auto-start</p>
           </motion.div>
         )}
       </AnimatePresence>
