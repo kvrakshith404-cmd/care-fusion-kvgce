@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Music, ExternalLink, CheckCircle, Sparkles, Filter } from "lucide-react";
+import { Music, Play, X, CheckCircle, Sparkles, Filter } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +34,7 @@ const Mood = () => {
   const [saved, setSaved] = useState(false);
   const [songs, setSongs] = useState<Song[]>([]);
   const [langFilter, setLangFilter] = useState("all");
+  const [playing, setPlaying] = useState<Song | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -60,6 +61,11 @@ const Mood = () => {
 
   const filteredSongs = langFilter === "all" ? songs : songs.filter((s) => s.langKey === langFilter);
   const displaySongs = filteredSongs.slice(0, 6);
+
+  const buildYouTubeEmbed = (song: Song) => {
+    const q = encodeURIComponent(`${song.name} ${song.artist} official audio`);
+    return `https://www.youtube.com/embed?listType=search&list=${q}&autoplay=1`;
+  };
 
   return (
     <div className="min-h-screen gradient-bg pb-24">
@@ -129,9 +135,9 @@ const Mood = () => {
                   <p className="text-xs text-muted-foreground text-center py-4">No songs found for this filter.</p>
                 )}
                 {displaySongs.map((song, i) => (
-                  <motion.a key={`${song.name}-${i}`} href={song.url} target="_blank" rel="noopener noreferrer"
+                  <motion.button key={`${song.name}-${i}`} onClick={() => setPlaying(song)}
                     initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
-                    className="glass-card-hover rounded-2xl p-3.5 flex items-center gap-3 block">
+                    className="w-full glass-card-hover rounded-2xl p-3.5 flex items-center gap-3 text-left">
                     <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0 shadow-md">
                       <Music className="w-5 h-5 text-white" />
                     </div>
@@ -139,14 +145,50 @@ const Mood = () => {
                       <p className="text-sm font-bold text-foreground truncate">{song.name}</p>
                       <p className="text-[11px] text-muted-foreground">{song.artist} · {song.lang}</p>
                     </div>
-                    <ExternalLink className="w-4 h-4 text-primary shrink-0" />
-                  </motion.a>
+                    <Play className="w-4 h-4 text-primary shrink-0 fill-primary" />
+                  </motion.button>
                 ))}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+
+      {/* In-app player */}
+      <AnimatePresence>
+        {playing && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-20 left-3 right-3 z-50 glass-card rounded-2xl p-3 shadow-2xl border border-border"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0">
+                  <Music className="w-4 h-4 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-foreground truncate">{playing.name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{playing.artist}</p>
+                </div>
+              </div>
+              <button onClick={() => setPlaying(null)} className="p-1.5 rounded-full hover:bg-muted shrink-0">
+                <X className="w-4 h-4 text-foreground" />
+              </button>
+            </div>
+            <iframe
+              key={playing.name + playing.artist}
+              src={buildYouTubeEmbed(playing)}
+              className="w-full rounded-xl"
+              height="80"
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+              title={playing.name}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
