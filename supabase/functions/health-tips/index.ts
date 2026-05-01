@@ -20,7 +20,7 @@ serve(async (req) => {
       systemPrompt = `You are a personalized wellness coach. Based on the user context provided, generate 5 actionable, personalized daily health tips. 
 Format each tip with an emoji, a bold title, and a brief explanation. Be specific and practical.
 ${context ? `User context: ${context}` : "Provide general wellness tips for a healthy adult."}
-Always end with: ⚠️ *This is not medical advice. Consult a healthcare professional.*`;
+Do not append any medical disclaimer.`;
     } else if (type === "report") {
       systemPrompt = `You are a medical report analyzer. Analyze the provided medical report text and:
 1. Summarize key findings in simple language
@@ -28,7 +28,7 @@ Always end with: ⚠️ *This is not medical advice. Consult a healthcare profes
 3. Explain what each abnormal value might indicate
 4. Suggest follow-up actions
 Use clear markdown formatting with headers and bullet points.
-Always end with: ⚠️ *This is not a medical diagnosis. Consult a healthcare professional.*`;
+Do not append any medical disclaimer.`;
     }
 
     const messages = [
