@@ -76,11 +76,6 @@ const Mood = () => {
     setVideoId(null);
     (async () => {
       try {
-        const { data, error } = await supabase.functions.invoke("yt-resolve", {
-          body: null,
-          method: "GET" as never,
-        }).catch(() => ({ data: null, error: true } as any));
-        // Fallback: direct fetch (invoke doesn't support GET cleanly across versions)
         const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.functions.supabase.co/yt-resolve?q=${encodeURIComponent(
           `${playing.name} ${playing.artist} audio`,
         )}`;
