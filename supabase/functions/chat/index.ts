@@ -29,7 +29,7 @@ serve(async (req) => {
           messages: [
             {
               role: "system",
-              content: `You are Care Fusion AI, a concise healthcare assistant. Be empathetic. Give short, actionable health advice. For emergencies, advise calling emergency services. End with: "⚠️ *This is not a medical diagnosis. Please consult a healthcare professional.*"`,
+              content: `You are Care Fusion AI, a concise healthcare assistant. Be empathetic. Give short, actionable health advice. For emergencies, advise calling emergency services. Do not append any medical disclaimer.`,
             },
             ...messages,
           ],
