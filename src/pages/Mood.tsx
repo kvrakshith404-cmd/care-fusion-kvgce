@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Music, Play, X, CheckCircle, Sparkles, Filter } from "lucide-react";
+import { Music, Play, X, CheckCircle, Sparkles, Filter, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +35,9 @@ const Mood = () => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [langFilter, setLangFilter] = useState("all");
   const [playing, setPlaying] = useState<Song | null>(null);
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
+  const resolveSeq = useRef(0);
   const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -62,10 +65,38 @@ const Mood = () => {
   const filteredSongs = langFilter === "all" ? songs : songs.filter((s) => s.langKey === langFilter);
   const displaySongs = filteredSongs.slice(0, 6);
 
-  const buildYouTubeEmbed = (song: Song) => {
-    const q = encodeURIComponent(`${song.name} ${song.artist} audio`);
-    // controls=1 keeps play controls; we visually hide the video frame below
-    return `https://www.youtube.com/embed?listType=search&list=${q}&autoplay=1&controls=1&modestbranding=1`;
+  // Resolve YouTube video ID via edge function for reliable autoplay
+  useEffect(() => {
+    if (!playing) {
+      setVideoId(null);
+      return;
+    }
+    const seq = ++resolveSeq.current;
+    setResolving(true);
+    setVideoId(null);
+    (async () => {
+      try {
+        const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.functions.supabase.co/yt-resolve?q=${encodeURIComponent(
+          `${playing.name} ${playing.artist} audio`,
+        )}`;
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        });
+        const json = await res.json();
+        if (seq !== resolveSeq.current) return;
+        setVideoId(json.videoId || null);
+      } catch {
+        if (seq === resolveSeq.current) setVideoId(null);
+      } finally {
+        if (seq === resolveSeq.current) setResolving(false);
+      }
+    })();
+  }, [playing]);
+
+  const playSong = (song: Song) => {
+    // Force remount even if same song re-tapped
+    setPlaying(null);
+    setTimeout(() => setPlaying(song), 30);
   };
 
   return (
@@ -136,7 +167,7 @@ const Mood = () => {
                   <p className="text-xs text-muted-foreground text-center py-4">No songs found for this filter.</p>
                 )}
                 {displaySongs.map((song, i) => (
-                  <motion.button key={`${song.name}-${i}`} onClick={() => setPlaying(song)}
+                  <motion.button key={`${song.name}-${i}`} onClick={() => playSong(song)}
                     initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
                     className="w-full glass-card-hover rounded-2xl p-3.5 flex items-center gap-3 text-left">
                     <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0 shadow-md">
@@ -179,20 +210,32 @@ const Mood = () => {
               </button>
             </div>
             {/* Audio-only: render YouTube iframe but clip video, keeping audio playing */}
-            <div className="relative w-full h-12 overflow-hidden rounded-xl bg-muted">
-              <iframe
-                key={playing.name + playing.artist}
-                src={buildYouTubeEmbed(playing)}
-                className="absolute left-0 w-full"
-                style={{ top: "-90px", height: "240px", pointerEvents: "auto" }}
-                allow="autoplay; encrypted-media"
-                title={playing.name}
-              />
-              <div className="absolute inset-x-0 top-0 h-12 pointer-events-none flex items-center justify-center">
-                <span className="text-[10px] font-semibold text-muted-foreground">🎵 Now playing audio</span>
-              </div>
+            <div className="relative w-full h-14 overflow-hidden rounded-xl bg-muted flex items-center justify-center">
+              {resolving && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-[11px] font-semibold">Loading audio...</span>
+                </div>
+              )}
+              {!resolving && !videoId && (
+                <span className="text-[11px] font-semibold text-destructive">Couldn't load audio</span>
+              )}
+              {videoId && (
+                <>
+                  <iframe
+                    key={videoId}
+                    src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&controls=1&modestbranding=1&rel=0&playsinline=1`}
+                    className="absolute left-0 w-full"
+                    style={{ top: "-80px", height: "240px" }}
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    title={playing.name}
+                  />
+                  <div className="absolute inset-x-0 top-0 h-14 pointer-events-none flex items-center justify-center">
+                    <span className="text-[10px] font-semibold text-muted-foreground bg-background/60 px-2 py-0.5 rounded-full">🎵 Now playing</span>
+                  </div>
+                </>
+              )}
             </div>
-            <p className="text-[9px] text-muted-foreground text-center mt-1">Tap play if audio doesn't auto-start</p>
           </motion.div>
         )}
       </AnimatePresence>
