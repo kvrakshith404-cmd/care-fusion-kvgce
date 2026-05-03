@@ -253,49 +253,32 @@ const Mood = () => {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-20 left-3 right-3 z-50 glass-card rounded-2xl p-3 shadow-2xl border border-border"
+            className="fixed bottom-20 left-3 right-3 z-50 glass-card rounded-2xl px-3 py-2 shadow-2xl border border-border h-14 flex items-center"
           >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0">
-                  <Music className="w-4 h-4 text-white" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-foreground truncate">{playing.name}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{playing.artist}</p>
-                </div>
+            <div className="flex items-center gap-2 w-full min-w-0">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0">
+                <Music className="w-4 h-4 text-white" />
               </div>
-              <button onClick={() => setPlaying(null)} className="p-1.5 rounded-full hover:bg-muted shrink-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-foreground truncate">{playing.name}</p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {resolving ? "Loading audio…" : !videoId ? "Couldn't load audio" : `${isPaused ? "Paused" : "Now playing"} · ${playing.artist}`}
+                </p>
+              </div>
+              {resolving ? (
+                <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" />
+              ) : videoId ? (
+                <button
+                  onClick={togglePlay}
+                  className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-md active:scale-95 transition shrink-0"
+                  aria-label={isPaused ? "Play" : "Pause"}
+                >
+                  {isPaused ? <Play className="w-3.5 h-3.5 text-primary-foreground fill-primary-foreground" /> : <Pause className="w-3.5 h-3.5 text-primary-foreground fill-primary-foreground" />}
+                </button>
+              ) : null}
+              <button onClick={() => setPlaying(null)} className="p-1.5 rounded-full hover:bg-muted shrink-0" aria-label="Close player">
                 <X className="w-4 h-4 text-foreground" />
               </button>
-            </div>
-            {/* Audio-only: render YouTube iframe but clip video, keeping audio playing */}
-            <div className="relative w-full h-14 rounded-xl bg-muted flex items-center justify-between px-3 overflow-hidden">
-              {resolving ? (
-                <div className="flex items-center gap-2 text-muted-foreground mx-auto">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-[11px] font-semibold">Loading audio...</span>
-                </div>
-              ) : !videoId ? (
-                <span className="text-[11px] font-semibold text-destructive mx-auto">Couldn't load audio</span>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-                    </span>
-                    <span className="text-[11px] font-bold text-foreground">🎵 {isPaused ? "Paused" : "Now playing"}</span>
-                  </div>
-                  <button
-                    onClick={togglePlay}
-                    className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shadow-md active:scale-95 transition"
-                    aria-label={isPaused ? "Play" : "Pause"}
-                  >
-                    {isPaused ? <Play className="w-4 h-4 text-primary-foreground fill-primary-foreground" /> : <Pause className="w-4 h-4 text-primary-foreground fill-primary-foreground" />}
-                  </button>
-                </>
-              )}
             </div>
             {/* Hidden YT player (audio-only). Kept off-screen so video never shows. */}
             <div style={{ position: "fixed", left: "-9999px", top: "-9999px", width: 1, height: 1, overflow: "hidden", pointerEvents: "none" }}>
