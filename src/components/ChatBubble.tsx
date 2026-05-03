@@ -12,6 +12,56 @@ type Message = { role: "user" | "assistant"; content: string };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
+const EMERGENCY_KEYWORDS = [
+  "heart attack", "cardiac arrest", "chest pain", "stroke", "unconscious",
+  "not breathing", "can't breathe", "cant breathe", "choking", "bleeding heavily",
+  "severe bleeding", "suicide", "overdose", "seizure", "anaphylaxis", "emergency",
+  "dying", "collapsed", "drowning", "poisoning", "severe burn",
+  "हार्ट अटैक", "दिल का दौरा", "आपातकाल", "बेहोश", "सांस नहीं",
+  "ಹೃದಯಾಘಾತ", "ತುರ್ತು", "ಎದೆ ನೋವು",
+];
+
+const isEmergency = (text: string) => {
+  const t = text.toLowerCase();
+  return EMERGENCY_KEYWORDS.some((k) => t.includes(k.toLowerCase()));
+};
+
+const getLocation = (): Promise<{ lat: number; lng: number } | null> =>
+  new Promise((resolve) => {
+    if (!("geolocation" in navigator)) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      () => resolve(null),
+      { timeout: 8000 },
+    );
+  });
+
+const buildEmergencyMessage = async (): Promise<string> => {
+  const loc = await getLocation();
+  let hospitalSection = "";
+  if (loc) {
+    try {
+      const { data } = await supabase.functions.invoke("nearby-hospitals", {
+        body: { lat: loc.lat, lng: loc.lng, radius: 5000 },
+      });
+      const results = (data?.results || []).slice(0, 3);
+      if (results.length) {
+        hospitalSection = "\n\n**🏥 Nearest Hospitals:**\n" + results.map((h: any, i: number) => {
+          const mapLink = `https://www.google.com/maps/dir/?api=1&destination=${h.geometry.location.lat},${h.geometry.location.lng}`;
+          const phone = h.phone ? ` · [📞 Call](tel:${h.phone})` : "";
+          return `${i + 1}. **${h.name}** — [🗺️ Directions](${mapLink})${phone}`;
+        }).join("\n");
+      }
+    } catch {}
+    if (!hospitalSection) {
+      hospitalSection = `\n\n[🗺️ Open hospitals near me](https://www.google.com/maps/search/hospitals/@${loc.lat},${loc.lng},14z)`;
+    }
+  } else {
+    hospitalSection = `\n\n[🗺️ Search hospitals near me](https://www.google.com/maps/search/hospitals+near+me)`;
+  }
+  return `🚨 **EMERGENCY DETECTED**\n\n**Call emergency services immediately:**\n- 🇮🇳 India: [📞 112](tel:112) / [108](tel:108)\n- 🇺🇸 US: [📞 911](tel:911)${hospitalSection}`;
+};
+
 const ChatBubble = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -54,13 +104,31 @@ const ChatBubble = () => {
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages); setInput(""); setIsLoading(true);
     await saveMessage(userMsg);
+
+    // Emergency detection: prepend an emergency card before AI reply
+    if (isEmergency(userMsg.content)) {
+      const emergencyMsg: Message = { role: "assistant", content: await buildEmergencyMessage() };
+      setMessages((prev) => [...prev, emergencyMsg]);
+      await saveMessage(emergencyMsg);
+    }
+
     let assistantSoFar = "";
     const upsertAssistant = (chunk: string) => {
       assistantSoFar += chunk;
       setMessages((prev) => {
         const last = prev[prev.length - 1];
-        if (last?.role === "assistant" && prev.length === updatedMessages.length + 1) return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
-        return [...prev, { role: "assistant", content: assistantSoFar }];
+        // Only update last message if it's the in-progress assistant stream (matches our current text)
+        if (last?.role === "assistant" && last.content === assistantSoFar.slice(0, last.content.length) && assistantSoFar.startsWith(last.content) && last.content !== "" && !last.content.startsWith("🚨")) {
+          return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
+        }
+        // First chunk or previous last is emergency card → append new assistant message
+        if (last?.role === "assistant" && last.content.startsWith("🚨")) {
+          return [...prev, { role: "assistant", content: assistantSoFar }];
+        }
+        if (last?.role === "user") {
+          return [...prev, { role: "assistant", content: assistantSoFar }];
+        }
+        return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
       });
     };
     try {
