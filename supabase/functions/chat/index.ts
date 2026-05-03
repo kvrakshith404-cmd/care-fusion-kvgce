@@ -12,9 +12,12 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, language } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const langMap: Record<string, string> = { en: "English", hi: "Hindi", kn: "Kannada" };
+    const langName = langMap[language] || "English";
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -29,7 +32,7 @@ serve(async (req) => {
           messages: [
             {
               role: "system",
-              content: `You are Care Fusion AI, a concise healthcare assistant. Be empathetic. Give short, actionable health advice. For emergencies, advise calling emergency services. Do not append any medical disclaimer.`,
+              content: `You are Care Fusion AI, a concise healthcare assistant. Be empathetic. Give short, actionable health advice. For emergencies, advise calling emergency services. Do not append any medical disclaimer. ALWAYS respond entirely in ${langName}, regardless of the language the user writes in. Translate all content—including medical terms when natural—into ${langName}.`,
             },
             ...messages,
           ],

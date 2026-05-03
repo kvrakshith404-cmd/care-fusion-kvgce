@@ -10,9 +10,12 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { image, type } = await req.json();
+    const { image, type, language } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const langMap: Record<string, string> = { en: "English", hi: "Hindi", kn: "Kannada" };
+    const langName = langMap[language] || "English";
 
     let prompt = "";
     if (type === "prescription") {
@@ -32,7 +35,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: prompt + "\n\nDo not append any medical disclaimer." },
+          { role: "system", content: prompt + `\n\nDo not append any medical disclaimer. ALWAYS write the entire response in ${langName}, regardless of any text in the image. Translate all headings, labels, and content into ${langName}.` },
           {
             role: "user",
             content: [
