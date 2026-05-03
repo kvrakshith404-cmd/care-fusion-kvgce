@@ -10,9 +10,12 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, context } = await req.json();
+    const { type, context, language } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const langMap: Record<string, string> = { en: "English", hi: "Hindi", kn: "Kannada" };
+    const langName = langMap[language] || "English";
 
     let systemPrompt = "";
 
@@ -30,6 +33,8 @@ Do not append any medical disclaimer.`;
 Use clear markdown formatting with headers and bullet points.
 Do not append any medical disclaimer.`;
     }
+
+    systemPrompt += `\n\nALWAYS respond entirely in ${langName}, regardless of the language used in the input. Translate all headings, bullets, and content into ${langName}.`;
 
     const messages = [
       { role: "system", content: systemPrompt },
