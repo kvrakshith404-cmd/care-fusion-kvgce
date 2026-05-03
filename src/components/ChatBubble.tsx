@@ -19,7 +19,7 @@ const ChatBubble = () => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     if (!user) { setMessages([]); return; }
@@ -64,7 +64,7 @@ const ChatBubble = () => {
       });
     };
     try {
-      const resp = await fetch(CHAT_URL, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` }, body: JSON.stringify({ messages: updatedMessages }) });
+      const resp = await fetch(CHAT_URL, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` }, body: JSON.stringify({ messages: updatedMessages, language }) });
       if (!resp.ok || !resp.body) { const errData = await resp.json().catch(() => ({})); throw new Error(errData.error || "Failed"); }
       const reader = resp.body.getReader(); const decoder = new TextDecoder(); let textBuffer = "";
       while (true) {

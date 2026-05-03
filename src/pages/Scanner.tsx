@@ -12,7 +12,7 @@ const Scanner = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [scanType, setScanType] = useState<"medicine" | "prescription">("medicine");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -25,7 +25,7 @@ const Scanner = () => {
       setScanResult(null);
       try {
         const { data, error } = await supabase.functions.invoke("analyze-image", {
-          body: { image: base64, type: scanType },
+          body: { image: base64, type: scanType, language },
         });
         if (error) throw error;
         setScanResult(data.result);

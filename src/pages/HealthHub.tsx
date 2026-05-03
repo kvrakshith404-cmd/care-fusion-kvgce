@@ -51,7 +51,7 @@ const HealthHub = () => {
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const hubFeatures = [
     { id: "symptoms", icon: Brain, title: t("symptomChecker"), desc: t("symptomCheckerDesc"), color: "from-violet-500 to-purple-400", tag: t("aiChat") },
@@ -68,7 +68,7 @@ const HealthHub = () => {
     setLoading(true); setResult(null);
     let full = "";
     try {
-      await streamFromUrl(CHAT_URL, { messages: [{ role: "user", content: `I'm experiencing: ${inputText}. Analyze possible causes, recommended actions, and when to see a doctor.` }] },
+      await streamFromUrl(CHAT_URL, { messages: [{ role: "user", content: `I'm experiencing: ${inputText}. Analyze possible causes, recommended actions, and when to see a doctor.` }], language },
         (chunk) => { full += chunk; setResult(full); });
     } catch { setResult("Unable to analyze symptoms. Please try again."); } finally { setLoading(false); }
   };
@@ -81,7 +81,7 @@ const HealthHub = () => {
       const base64 = ev.target?.result as string;
       setSelectedImage(base64); setLoading(true); setResult(null);
       try {
-        const { data, error } = await supabase.functions.invoke("analyze-image", { body: { image: base64, type: "injury" } });
+        const { data, error } = await supabase.functions.invoke("analyze-image", { body: { image: base64, type: "injury", language } });
         if (error) throw error;
         setResult(data.result);
       } catch { setResult("Unable to analyze the injury image."); } finally { setLoading(false); }
@@ -94,14 +94,14 @@ const HealthHub = () => {
     setLoading(true); setResult(null);
     if (selectedImage) {
       try {
-        const { data, error } = await supabase.functions.invoke("analyze-image", { body: { image: selectedImage, type: "prescription" } });
+        const { data, error } = await supabase.functions.invoke("analyze-image", { body: { image: selectedImage, type: "prescription", language } });
         if (error) throw error;
         setResult(data.result);
       } catch { setResult("Unable to analyze the report."); } finally { setLoading(false); }
     } else {
       let full = "";
       try {
-        await streamFromUrl(TIPS_URL, { type: "report", context: inputText }, (chunk) => { full += chunk; setResult(full); });
+        await streamFromUrl(TIPS_URL, { type: "report", context: inputText, language }, (chunk) => { full += chunk; setResult(full); });
       } catch { setResult("Unable to analyze the report text."); } finally { setLoading(false); }
     }
   };
@@ -118,7 +118,7 @@ const HealthHub = () => {
     setLoading(true); setResult(null);
     let full = "";
     try {
-      await streamFromUrl(TIPS_URL, { type: "tips", context: inputText.trim() || "Generate personalized health tips for today." },
+      await streamFromUrl(TIPS_URL, { type: "tips", context: inputText.trim() || "Generate personalized health tips for today.", language },
         (chunk) => { full += chunk; setResult(full); });
     } catch { setResult("Unable to generate health tips."); } finally { setLoading(false); }
   };
