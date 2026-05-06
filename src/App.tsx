@@ -75,7 +75,7 @@ const AppRoutes = () => {
 
       {/* App stage */}
       <main className={user
-        ? "flex-1 lg:max-w-[520px] xl:max-w-[560px] lg:my-6 lg:mr-6 lg:rounded-[2.5rem] lg:overflow-hidden lg:shadow-2xl lg:border lg:border-white/40 lg:bg-background relative"
+        ? "flex-1 lg:flex-none lg:w-[520px] xl:w-[560px] lg:my-6 lg:mx-auto lg:rounded-[2.5rem] lg:overflow-hidden lg:shadow-2xl lg:border lg:border-white/40 lg:bg-background relative"
         : "w-full"}>
         <Routes>
         <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
