@@ -61,7 +61,13 @@ const HealthHub = () => {
   ];
 
   const reset = () => { setResult(null); setInputText(""); setSelectedImage(null); };
-  const toggleFeature = (id: string) => { if (activeFeature === id) { setActiveFeature(null); reset(); } else { setActiveFeature(id); reset(); } };
+  const toggleFeature = (id: string) => {
+    if (activeFeature === id) { setActiveFeature(null); reset(); }
+    else {
+      setActiveFeature(id); reset();
+      setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+    }
+  };
 
   const analyzeSymptoms = async () => {
     if (!inputText.trim()) return;
@@ -134,26 +140,6 @@ const HealthHub = () => {
       </div>
 
       <div className="px-5 mt-6 space-y-3">
-        {hubFeatures.map((feature, i) => (
-          <motion.div key={feature.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08 + i * 0.06 }} whileTap={{ scale: 0.98 }} onClick={() => toggleFeature(feature.id)}
-            className={`glass-card-hover rounded-2xl p-4 cursor-pointer ${activeFeature === feature.id ? "ring-2 ring-primary/30" : ""}`}>
-            <div className="flex items-start gap-3">
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center shrink-0 shadow-md`}>
-                <feature.icon className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-sm font-bold text-foreground">{feature.title}</h3>
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">{feature.tag}</span>
-                </div>
-                <p className="text-[12px] text-muted-foreground leading-relaxed">{feature.desc}</p>
-              </div>
-              <ArrowRight className={`w-4 h-4 text-muted-foreground mt-1 shrink-0 transition-transform ${activeFeature === feature.id ? "rotate-90" : ""}`} />
-            </div>
-          </motion.div>
-        ))}
-
         <AnimatePresence>
           {activeFeature === "symptoms" && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="glass-card rounded-3xl p-5 overflow-hidden">
@@ -165,9 +151,6 @@ const HealthHub = () => {
               {result && <ResultCard result={result} onClose={reset} t={t} />}
             </motion.div>
           )}
-        </AnimatePresence>
-
-        <AnimatePresence>
           {activeFeature === "injury" && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="glass-card rounded-3xl p-5 overflow-hidden">
               <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleInjuryUpload} />
@@ -188,9 +171,6 @@ const HealthHub = () => {
               {result && <ResultCard result={result} onClose={reset} t={t} />}
             </motion.div>
           )}
-        </AnimatePresence>
-
-        <AnimatePresence>
           {activeFeature === "report" && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="glass-card rounded-3xl p-5 overflow-hidden">
               <div className="flex items-center gap-2 mb-3"><FileSearch className="w-4 h-4 text-primary" /><h3 className="text-sm font-bold text-foreground">{t("analyzeMedicalReport")}</h3></div>
@@ -214,9 +194,6 @@ const HealthHub = () => {
               {result && <ResultCard result={result} onClose={reset} t={t} />}
             </motion.div>
           )}
-        </AnimatePresence>
-
-        <AnimatePresence>
           {activeFeature === "tips" && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="glass-card rounded-3xl p-5 overflow-hidden">
               <div className="flex items-center gap-2 mb-3"><Stethoscope className="w-4 h-4 text-primary" /><h3 className="text-sm font-bold text-foreground">{t("personalizedHealthTips")}</h3></div>
@@ -228,6 +205,26 @@ const HealthHub = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {hubFeatures.map((feature, i) => (
+          <motion.div key={feature.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 + i * 0.06 }} whileTap={{ scale: 0.98 }} onClick={() => toggleFeature(feature.id)}
+            className={`glass-card-hover rounded-2xl p-4 cursor-pointer ${activeFeature === feature.id ? "ring-2 ring-primary/30" : ""}`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center shrink-0 shadow-md`}>
+                <feature.icon className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-sm font-bold text-foreground">{feature.title}</h3>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">{feature.tag}</span>
+                </div>
+                <p className="text-[12px] text-muted-foreground leading-relaxed">{feature.desc}</p>
+              </div>
+              <ArrowRight className={`w-4 h-4 text-muted-foreground mt-1 shrink-0 transition-transform ${activeFeature === feature.id ? "rotate-90" : ""}`} />
+            </div>
+          </motion.div>
+        ))}
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="glass-card rounded-2xl p-4 text-center">
           <p className="text-[11px] text-muted-foreground font-medium">{t("disclaimer")}</p>
