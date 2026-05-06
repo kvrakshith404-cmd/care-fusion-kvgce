@@ -11,6 +11,7 @@ const Scanner = () => {
   const [scanning, setScanning] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [scanType, setScanType] = useState<"medicine" | "prescription">("medicine");
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t, language } = useLanguage();
 
@@ -60,7 +61,8 @@ const Scanner = () => {
 
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}
           className="glass-card rounded-3xl p-5 flex flex-col items-center">
-          <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileUpload} />
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileUpload} />
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
           {selectedImage ? (
             <div className="relative w-full">
               <img src={selectedImage} alt="Scan" className="w-full max-h-56 object-contain rounded-2xl" />
@@ -80,7 +82,7 @@ const Scanner = () => {
             </div>
           )}
           <div className="flex gap-3 mt-5 w-full">
-            <Button onClick={() => fileInputRef.current?.click()} className="flex-1 h-12 rounded-2xl gradient-primary text-primary-foreground font-semibold glow-sm">
+            <Button onClick={() => cameraInputRef.current?.click()} className="flex-1 h-12 rounded-2xl gradient-primary text-primary-foreground font-semibold glow-sm">
               <Camera className="w-4 h-4 mr-2" />{selectedImage ? t("retake") : t("scan")}
             </Button>
             <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1 h-12 rounded-2xl font-semibold border-primary/20">
