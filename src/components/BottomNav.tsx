@@ -17,7 +17,7 @@ const BottomNav = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/20 pb-safe" style={{
+    <nav className="fixed bottom-0 left-0 right-0 lg:left-1/2 lg:-translate-x-1/2 lg:max-w-[520px] xl:max-w-[560px] lg:rounded-t-3xl z-40 border-t border-white/20 pb-safe" style={{
       background: "rgba(255,255,255,0.75)",
       backdropFilter: "blur(24px) saturate(200%)",
       WebkitBackdropFilter: "blur(24px) saturate(200%)",
