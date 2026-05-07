@@ -53,8 +53,14 @@ const Index = () => {
           </div>
           <div className="flex gap-2">
             <LanguageSelector />
-            <button onClick={() => navigate("/profile")} className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center">
+            <button
+              onClick={() => navigate("/profile")}
+              aria-label={t("profile")}
+              title={t("profile")}
+              className="h-10 px-3 rounded-2xl bg-white/15 flex items-center gap-1.5"
+            >
               <User className="w-4 h-4 text-primary-foreground" />
+              <span className="text-xs text-primary-foreground font-semibold">{t("profile")}</span>
             </button>
           </div>
         </motion.div>
