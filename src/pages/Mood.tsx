@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Music, Play, Pause, X, CheckCircle, Sparkles, Filter, Loader2, ScanFace } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,7 +39,12 @@ const Mood = () => {
   const [resolving, setResolving] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [scanning, setScanning] = useState(false);
-  const faceInputRef = useRef<HTMLInputElement>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [faceStatus, setFaceStatus] = useState<"detecting" | "detected" | "analyzing">("detecting");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const detectIntervalRef = useRef<number | null>(null);
+  const capturedRef = useRef(false);
   const ytPlayerRef = useRef<any>(null);
   const ytContainerRef = useRef<HTMLDivElement>(null);
   const resolveSeq = useRef(0);
@@ -67,18 +72,25 @@ const Mood = () => {
     }
   };
 
-  const handleFaceScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) e.target.value = "";
-    if (!file) return;
-    setScanning(true);
+  const stopCamera = useCallback(() => {
+    if (detectIntervalRef.current) {
+      window.clearInterval(detectIntervalRef.current);
+      detectIntervalRef.current = null;
+    }
+    streamRef.current?.getTracks().forEach((tr) => tr.stop());
+    streamRef.current = null;
+  }, []);
+
+  const closeCamera = useCallback(() => {
+    stopCamera();
+    setCameraOpen(false);
+    setScanning(false);
+    setFaceStatus("detecting");
+    capturedRef.current = false;
+  }, [stopCamera]);
+
+  const analyzeBase64 = async (base64: string) => {
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result as string);
-        r.onerror = reject;
-        r.readAsDataURL(file);
-      });
       const { data, error } = await supabase.functions.invoke("analyze-image", {
         body: { image: base64, type: "mood", language },
       });
@@ -90,12 +102,91 @@ const Mood = () => {
       } else {
         await selectMood(valid);
       }
-    } catch (err) {
+    } catch {
       toast({ title: t("faceScanFailed"), variant: "destructive" });
     } finally {
-      setScanning(false);
+      closeCamera();
     }
   };
+
+  const captureAndAnalyze = async () => {
+    if (capturedRef.current) return;
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    capturedRef.current = true;
+    setFaceStatus("analyzing");
+    setScanning(true);
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      closeCamera();
+      return;
+    }
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const base64 = canvas.toDataURL("image/jpeg", 0.85);
+    stopCamera();
+    await analyzeBase64(base64);
+  };
+
+  const openCamera = async () => {
+    capturedRef.current = false;
+    setFaceStatus("detecting");
+    setCameraOpen(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      // Wait for video element
+      await new Promise((r) => setTimeout(r, 50));
+      const video = videoRef.current;
+      if (!video) {
+        stream.getTracks().forEach((tr) => tr.stop());
+        return;
+      }
+      video.srcObject = stream;
+      await video.play().catch(() => {});
+
+      // Try native FaceDetector
+      const FD = (window as any).FaceDetector;
+      let consecutive = 0;
+      let elapsed = 0;
+      detectIntervalRef.current = window.setInterval(async () => {
+        if (capturedRef.current) return;
+        elapsed += 350;
+        if (FD) {
+          try {
+            const detector = new FD({ fastMode: true });
+            const faces = await detector.detect(video);
+            if (faces && faces.length > 0) {
+              consecutive += 1;
+              setFaceStatus("detected");
+              if (consecutive >= 2) captureAndAnalyze();
+            } else {
+              consecutive = 0;
+              setFaceStatus("detecting");
+            }
+            return;
+          } catch {
+            // fall through to fallback
+          }
+        }
+        // Fallback: no FaceDetector — auto-capture after 2.5s
+        if (elapsed >= 2500) {
+          setFaceStatus("detected");
+          captureAndAnalyze();
+        }
+      }, 350);
+    } catch (err) {
+      toast({ title: t("cameraError"), variant: "destructive" });
+      closeCamera();
+    }
+  };
+
+  useEffect(() => () => stopCamera(), [stopCamera]);
 
   const filteredSongs = langFilter === "all" ? songs : songs.filter((s) => s.langKey === langFilter);
   const displaySongs = filteredSongs.slice(0, 6);
@@ -206,21 +297,13 @@ const Mood = () => {
           <div className="flex items-center justify-between mb-3 gap-3">
             <h2 className="text-base font-bold text-foreground">{t("selectYourMood")}</h2>
             <button
-              onClick={() => faceInputRef.current?.click()}
+              onClick={openCamera}
               disabled={scanning}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full gradient-primary text-primary-foreground text-[11px] font-bold shadow-md active:scale-95 transition disabled:opacity-60"
             >
               {scanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ScanFace className="w-3.5 h-3.5" />}
               {scanning ? t("scanningFace") : t("scanFace")}
             </button>
-            <input
-              ref={faceInputRef}
-              type="file"
-              accept="image/*"
-              capture="user"
-              className="hidden"
-              onChange={handleFaceScan}
-            />
           </div>
           <div className="grid grid-cols-3 gap-2.5">
             {moodKeys.map((key, i) => {
@@ -345,6 +428,65 @@ const Mood = () => {
             <div style={{ position: "fixed", left: "-9999px", top: "-9999px", width: 1, height: 1, overflow: "hidden", pointerEvents: "none" }}>
               <div ref={ytContainerRef} />
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Live face scan camera */}
+      <AnimatePresence>
+        {cameraOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center p-4"
+          >
+            <button
+              onClick={closeCamera}
+              className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center"
+              aria-label={t("cancel")}
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+
+            <div className="relative w-full max-w-sm aspect-square rounded-3xl overflow-hidden bg-black">
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+                className="w-full h-full object-cover scale-x-[-1]"
+              />
+              {/* Face frame overlay */}
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <motion.div
+                  animate={{
+                    borderColor:
+                      faceStatus === "detecting"
+                        ? "rgba(255,255,255,0.6)"
+                        : "rgba(74,222,128,0.95)",
+                    scale: faceStatus === "detected" ? 1.04 : 1,
+                  }}
+                  transition={{ duration: 0.3 }}
+                  className="w-3/4 aspect-[3/4] rounded-[45%] border-4"
+                />
+              </div>
+              {faceStatus === "analyzing" && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                </div>
+              )}
+            </div>
+
+            <p className="mt-5 text-white text-sm font-semibold text-center">
+              {faceStatus === "analyzing"
+                ? t("scanningFace")
+                : faceStatus === "detected"
+                ? t("faceDetected")
+                : t("positionFace")}
+            </p>
+            <p className="mt-1 text-white/60 text-xs text-center">
+              {faceStatus === "detecting" ? t("detectingFace") : ""}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
