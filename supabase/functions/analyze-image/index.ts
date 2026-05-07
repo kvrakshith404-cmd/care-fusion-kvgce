@@ -37,11 +37,11 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: prompt + `\n\nDo not append any medical disclaimer. ALWAYS write the entire response in ${langName}, regardless of any text in the image. Translate all headings, labels, and content into ${langName}.` },
+          { role: "system", content: prompt + (type === "mood" ? "" : `\n\nDo not append any medical disclaimer. ALWAYS write the entire response in ${langName}, regardless of any text in the image. Translate all headings, labels, and content into ${langName}.`) },
           {
             role: "user",
             content: [
-              { type: "text", text: type === "prescription" ? "Please analyze this prescription:" : type === "injury" ? "Please analyze this injury:" : "Please identify this medicine:" },
+              { type: "text", text: type === "prescription" ? "Please analyze this prescription:" : type === "injury" ? "Please analyze this injury:" : type === "mood" ? "Classify the mood:" : "Please identify this medicine:" },
               { type: "image_url", image_url: { url: image } },
             ],
           },
