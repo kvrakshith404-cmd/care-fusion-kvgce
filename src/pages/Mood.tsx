@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Music, Play, Pause, X, CheckCircle, Sparkles, Filter, Loader2 } from "lucide-react";
+import { Music, Play, Pause, X, CheckCircle, Sparkles, Filter, Loader2, ScanFace } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -38,12 +38,14 @@ const Mood = () => {
   const [videoId, setVideoId] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const faceInputRef = useRef<HTMLInputElement>(null);
   const ytPlayerRef = useRef<any>(null);
   const ytContainerRef = useRef<HTMLDivElement>(null);
   const resolveSeq = useRef(0);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const selectMood = async (key: string) => {
     setSelected(key);
@@ -62,6 +64,36 @@ const Mood = () => {
         setSaved(true);
         toast({ title: t("moodLogged"), description: t("musicForMood") });
       }
+    }
+  };
+
+  const handleFaceScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) e.target.value = "";
+    if (!file) return;
+    setScanning(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result as string);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+      const { data, error } = await supabase.functions.invoke("analyze-image", {
+        body: { image: base64, type: "mood", language },
+      });
+      if (error) throw error;
+      const raw = (data?.result || "").toLowerCase().replace(/[^a-z]/g, "");
+      const valid = moodKeys.find((k) => raw.includes(k));
+      if (!valid) {
+        toast({ title: t("faceScanFailed"), variant: "destructive" });
+      } else {
+        await selectMood(valid);
+      }
+    } catch (err) {
+      toast({ title: t("faceScanFailed"), variant: "destructive" });
+    } finally {
+      setScanning(false);
     }
   };
 
@@ -171,7 +203,25 @@ const Mood = () => {
 
       <div className="px-5 mt-6 space-y-5">
         <div>
-          <h2 className="text-base font-bold text-foreground mb-3">{t("selectYourMood")}</h2>
+          <div className="flex items-center justify-between mb-3 gap-3">
+            <h2 className="text-base font-bold text-foreground">{t("selectYourMood")}</h2>
+            <button
+              onClick={() => faceInputRef.current?.click()}
+              disabled={scanning}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full gradient-primary text-primary-foreground text-[11px] font-bold shadow-md active:scale-95 transition disabled:opacity-60"
+            >
+              {scanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ScanFace className="w-3.5 h-3.5" />}
+              {scanning ? t("scanningFace") : t("scanFace")}
+            </button>
+            <input
+              ref={faceInputRef}
+              type="file"
+              accept="image/*"
+              capture="user"
+              className="hidden"
+              onChange={handleFaceScan}
+            />
+          </div>
           <div className="grid grid-cols-3 gap-2.5">
             {moodKeys.map((key, i) => {
               const meta = moodMeta[key];

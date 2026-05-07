@@ -22,6 +22,8 @@ serve(async (req) => {
       prompt = "You are a medical OCR assistant. Analyze this prescription image and extract: medicine names, dosages, frequency, duration, and any special instructions. Format clearly with bullet points.";
     } else if (type === "injury") {
       prompt = "You are a first-aid and injury assessment assistant. Analyze this injury image and provide: type of injury identified, severity assessment, immediate first-aid steps, what NOT to do, and when to seek emergency care. Format clearly with markdown headers and bullet points.";
+    } else if (type === "mood") {
+      prompt = "You are a facial emotion classifier. Look at the face in the image and classify the dominant mood. Respond with ONLY ONE of these exact lowercase words and nothing else (no punctuation, no explanation): happy, calm, stressed, sad, angry, tired, loved, sick, excited.";
     } else {
       prompt = "You are a medicine identification assistant. Analyze this medicine image and provide: medicine name, active ingredients, common uses, dosage information, side effects, and precautions. Format clearly with markdown.";
     }
@@ -35,11 +37,11 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: prompt + `\n\nDo not append any medical disclaimer. ALWAYS write the entire response in ${langName}, regardless of any text in the image. Translate all headings, labels, and content into ${langName}.` },
+          { role: "system", content: prompt + (type === "mood" ? "" : `\n\nDo not append any medical disclaimer. ALWAYS write the entire response in ${langName}, regardless of any text in the image. Translate all headings, labels, and content into ${langName}.`) },
           {
             role: "user",
             content: [
-              { type: "text", text: type === "prescription" ? "Please analyze this prescription:" : type === "injury" ? "Please analyze this injury:" : "Please identify this medicine:" },
+              { type: "text", text: type === "prescription" ? "Please analyze this prescription:" : type === "injury" ? "Please analyze this injury:" : type === "mood" ? "Classify the mood:" : "Please identify this medicine:" },
               { type: "image_url", image_url: { url: image } },
             ],
           },
