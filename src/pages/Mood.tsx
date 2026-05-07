@@ -226,20 +226,31 @@ const Mood = () => {
                 {displaySongs.length === 0 && (
                   <p className="text-xs text-muted-foreground text-center py-4">No songs found for this filter.</p>
                 )}
-                {displaySongs.map((song, i) => (
-                  <motion.button key={`${song.name}-${i}`} onClick={() => playSong(song)}
-                    initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
-                    className="w-full glass-card-hover rounded-2xl p-3.5 flex items-center gap-3 text-left">
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0 shadow-md">
-                      <Music className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-foreground truncate">{song.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{song.artist} · {song.lang}</p>
-                    </div>
-                    <Play className="w-4 h-4 text-primary shrink-0 fill-primary" />
-                  </motion.button>
-                ))}
+                {displaySongs.map((song, i) => {
+                  const isPlaying = playing?.name === song.name && playing?.artist === song.artist;
+                  return (
+                    <motion.button key={`${song.name}-${i}`} onClick={() => playSong(song)}
+                      initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
+                      className={`w-full rounded-2xl p-3.5 flex items-center gap-3 text-left ${isPlaying ? "glass-card border border-primary/40" : "glass-card-hover"}`}>
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0 shadow-md">
+                        <Music className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate">{song.name}</p>
+                        <p className="text-[11px] text-muted-foreground">{song.artist} · {song.lang}</p>
+                      </div>
+                      {isPlaying ? (
+                        <div className="flex items-end gap-0.5 h-4 shrink-0" aria-label="Playing">
+                          <motion.span className="w-0.5 bg-primary rounded-full" animate={{ height: ["30%", "100%", "30%"] }} transition={{ duration: 0.8, repeat: Infinity }} />
+                          <motion.span className="w-0.5 bg-primary rounded-full" animate={{ height: ["100%", "40%", "100%"] }} transition={{ duration: 0.8, repeat: Infinity, delay: 0.15 }} />
+                          <motion.span className="w-0.5 bg-primary rounded-full" animate={{ height: ["50%", "90%", "50%"] }} transition={{ duration: 0.8, repeat: Infinity, delay: 0.3 }} />
+                        </div>
+                      ) : (
+                        <Play className="w-4 h-4 text-primary shrink-0 fill-primary" />
+                      )}
+                    </motion.button>
+                  );
+                })}
               </div>
             </motion.div>
           )}
