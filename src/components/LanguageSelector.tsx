@@ -20,9 +20,10 @@ const LanguageSelector = () => {
 
   return (
     <Select value={language} onValueChange={(val) => setLanguage(val as Language)}>
-      <SelectTrigger className="h-10 rounded-2xl bg-white/15 border-0 flex items-center gap-1.5 px-2.5 [&>svg]:hidden">
+      <SelectTrigger className="h-10 rounded-2xl bg-white/15 border-0 flex items-center gap-1.5 px-3 [&>svg]:hidden">
         <Globe className="w-4 h-4 text-primary-foreground" />
         <span className="text-sm text-primary-foreground font-medium">{currentLang?.flag}</span>
+        <span className="text-xs text-primary-foreground/90 font-semibold uppercase">{currentLang?.value}</span>
       </SelectTrigger>
       <SelectContent className="min-w-[140px]">
         {languages.map((lang) => (
