@@ -74,6 +74,8 @@ const ChatBubble = () => {
   const [isListening, setIsListening] = useState(false);
   const [voiceOutput, setVoiceOutput] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const finalTranscriptRef = useRef<string>("");
+  const shouldAutoSendRef = useRef<boolean>(false);
   const lastSpokenRef = useRef<string>("");
   const langTag = language === "hi" ? "hi-IN" : language === "kn" ? "kn-IN" : "en-US";
 
@@ -89,22 +91,69 @@ const ChatBubble = () => {
 
   const toggleListening = () => {
     const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { alert("Voice input not supported in this browser. Try Chrome."); return; }
-    if (isListening) { recognitionRef.current?.stop(); return; }
+    if (!SR) {
+      alert("Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.");
+      return;
+    }
+    if (isListening && recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+      return;
+    }
+    // Stop any ongoing TTS so the mic doesn't pick it up
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+
+    // Create + start synchronously inside the user gesture (required by browsers)
     const rec = new SR();
     rec.lang = langTag;
     rec.interimResults = true;
     rec.continuous = false;
+    rec.maxAlternatives = 1;
+    finalTranscriptRef.current = "";
+    shouldAutoSendRef.current = false;
+
+    rec.onstart = () => setIsListening(true);
     rec.onresult = (e: any) => {
-      let txt = "";
-      for (let i = 0; i < e.results.length; i++) txt += e.results[i][0].transcript;
-      setInput(txt);
+      let interim = "";
+      let finalText = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finalText += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      if (finalText) {
+        finalTranscriptRef.current = (finalTranscriptRef.current + " " + finalText).trim();
+        shouldAutoSendRef.current = true;
+      }
+      setInput((finalTranscriptRef.current + " " + interim).trim());
     };
-    rec.onend = () => setIsListening(false);
-    rec.onerror = () => setIsListening(false);
+    rec.onerror = (e: any) => {
+      setIsListening(false);
+      const err = e?.error || "unknown";
+      if (err === "not-allowed" || err === "service-not-allowed") {
+        alert("Microphone permission denied. Please allow mic access in your browser settings.");
+      } else if (err === "no-speech") {
+        // silent
+      } else if (err !== "aborted") {
+        console.warn("Speech recognition error:", err);
+      }
+    };
+    rec.onend = () => {
+      setIsListening(false);
+      const text = finalTranscriptRef.current.trim();
+      if (shouldAutoSendRef.current && text) {
+        setInput(text);
+        // Defer so React flushes input state before sendMessage reads it
+        setTimeout(() => sendMessage(text), 50);
+      }
+      shouldAutoSendRef.current = false;
+    };
     recognitionRef.current = rec;
-    setIsListening(true);
-    rec.start();
+    try {
+      rec.start();
+    } catch (err) {
+      console.error("Failed to start speech recognition:", err);
+      setIsListening(false);
+    }
   };
 
   const toggleVoiceOutput = () => {
@@ -142,13 +191,14 @@ const ChatBubble = () => {
     setMessages([{ role: "assistant", content: t("chatCleared") + "\n\n⚠️ *This is not a medical diagnosis.*" }]);
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+  const sendMessage = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
+    if (!text || isLoading) return;
     if (!user) {
-      setMessages((prev) => [...prev, { role: "user", content: input.trim() }, { role: "assistant", content: t("signInToUseChat") }]);
+      setMessages((prev) => [...prev, { role: "user", content: text }, { role: "assistant", content: t("signInToUseChat") }]);
       setInput(""); return;
     }
-    const userMsg: Message = { role: "user", content: input.trim() };
+    const userMsg: Message = { role: "user", content: text };
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages); setInput(""); setIsLoading(true);
     await saveMessage(userMsg);
