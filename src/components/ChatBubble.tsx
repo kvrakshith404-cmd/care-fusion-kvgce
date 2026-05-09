@@ -191,13 +191,14 @@ const ChatBubble = () => {
     setMessages([{ role: "assistant", content: t("chatCleared") + "\n\n⚠️ *This is not a medical diagnosis.*" }]);
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+  const sendMessage = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
+    if (!text || isLoading) return;
     if (!user) {
-      setMessages((prev) => [...prev, { role: "user", content: input.trim() }, { role: "assistant", content: t("signInToUseChat") }]);
+      setMessages((prev) => [...prev, { role: "user", content: text }, { role: "assistant", content: t("signInToUseChat") }]);
       setInput(""); return;
     }
-    const userMsg: Message = { role: "user", content: input.trim() };
+    const userMsg: Message = { role: "user", content: text };
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages); setInput(""); setIsLoading(true);
     await saveMessage(userMsg);
