@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot, User, Trash2 } from "lucide-react";
+import { MessageCircle, X, Send, Bot, User, Trash2, Mic, Volume2, VolumeX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +70,54 @@ const ChatBubble = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { t, language } = useLanguage();
+
+  const [isListening, setIsListening] = useState(false);
+  const [voiceOutput, setVoiceOutput] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const lastSpokenRef = useRef<string>("");
+  const langTag = language === "hi" ? "hi-IN" : language === "kn" ? "kn-IN" : "en-US";
+
+  const speak = (text: string) => {
+    if (!voiceOutput || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const clean = text.replace(/\[(.*?)\]\(.*?\)/g, "$1").replace(/[*_`#>]/g, "").replace(/\s+/g, " ").trim();
+    if (!clean) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = langTag;
+    window.speechSynthesis.speak(u);
+  };
+
+  const toggleListening = () => {
+    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { alert("Voice input not supported in this browser. Try Chrome."); return; }
+    if (isListening) { recognitionRef.current?.stop(); return; }
+    const rec = new SR();
+    rec.lang = langTag;
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.onresult = (e: any) => {
+      let txt = "";
+      for (let i = 0; i < e.results.length; i++) txt += e.results[i][0].transcript;
+      setInput(txt);
+    };
+    rec.onend = () => setIsListening(false);
+    rec.onerror = () => setIsListening(false);
+    recognitionRef.current = rec;
+    setIsListening(true);
+    rec.start();
+  };
+
+  const toggleVoiceOutput = () => {
+    setVoiceOutput((v) => {
+      if (v && "speechSynthesis" in window) window.speechSynthesis.cancel();
+      return !v;
+    });
+  };
+
+  useEffect(() => () => {
+    try { recognitionRef.current?.stop(); } catch {}
+    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+  }, []);
 
   useEffect(() => {
     if (!user) { setMessages([]); return; }
@@ -149,7 +197,13 @@ const ChatBubble = () => {
           catch { textBuffer = line + "\n" + textBuffer; break; }
         }
       }
-      if (assistantSoFar) await saveMessage({ role: "assistant", content: assistantSoFar });
+      if (assistantSoFar) {
+        await saveMessage({ role: "assistant", content: assistantSoFar });
+        if (assistantSoFar !== lastSpokenRef.current) {
+          lastSpokenRef.current = assistantSoFar;
+          speak(assistantSoFar);
+        }
+      }
     } catch (e: any) { upsertAssistant(t("sorryError") + " " + (e.message || "")); } finally { setIsLoading(false); }
   };
 
@@ -177,6 +231,9 @@ const ChatBubble = () => {
                 </div>
               </div>
               <div className="flex gap-1">
+                <button onClick={toggleVoiceOutput} title="Toggle voice output" className={`w-8 h-8 rounded-full flex items-center justify-center ${voiceOutput ? "bg-white/40" : "bg-white/20"}`}>
+                  {voiceOutput ? <Volume2 className="w-4 h-4 text-primary-foreground" /> : <VolumeX className="w-4 h-4 text-primary-foreground" />}
+                </button>
                 {user && (<button onClick={clearChat} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center"><Trash2 className="w-4 h-4 text-primary-foreground" /></button>)}
                 <button onClick={() => setIsOpen(false)} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center"><X className="w-4 h-4 text-primary-foreground" /></button>
               </div>
@@ -209,6 +266,9 @@ const ChatBubble = () => {
                 <Input value={input} onChange={(e) => setInput(e.target.value)}
                   placeholder={user ? t("askAnything") : t("signInToChat")}
                   className="rounded-full bg-secondary/50 border-0 focus-visible:ring-primary" />
+                <Button type="button" onClick={toggleListening} size="icon" title="Voice input" className={`rounded-full shrink-0 ${isListening ? "bg-destructive hover:bg-destructive/90 animate-pulse" : "gradient-primary"}`}>
+                  <Mic className="w-4 h-4" />
+                </Button>
                 <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="rounded-full gradient-primary shrink-0"><Send className="w-4 h-4" /></Button>
               </form>
             </div>
