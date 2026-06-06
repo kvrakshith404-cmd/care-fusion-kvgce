@@ -38,6 +38,45 @@ export type Database = {
         }
         Relationships: []
       }
+      heart_analyses: {
+        Row: {
+          audio_data: string | null
+          confidence: number
+          created_at: string
+          duration_seconds: number | null
+          findings: string | null
+          id: string
+          recommendations: string | null
+          risk_level: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          audio_data?: string | null
+          confidence?: number
+          created_at?: string
+          duration_seconds?: number | null
+          findings?: string | null
+          id?: string
+          recommendations?: string | null
+          risk_level: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          audio_data?: string | null
+          confidence?: number
+          created_at?: string
+          duration_seconds?: number | null
+          findings?: string | null
+          id?: string
+          recommendations?: string | null
+          risk_level?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meds: {
         Row: {
           created_at: string
