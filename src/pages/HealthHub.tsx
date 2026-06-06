@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Brain, FileSearch, Stethoscope, ArrowRight, Send, Loader2, X, Sparkles, Upload, CheckCircle } from "lucide-react";
+import { Camera, Brain, FileSearch, Stethoscope, ArrowRight, Send, Loader2, X, Sparkles, Upload, CheckCircle, HeartPulse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { useLanguage } from "@/contexts/LanguageContext";
+import CardioShield from "@/components/CardioShield";
 
 const TIPS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/health-tips`;
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -58,6 +59,7 @@ const HealthHub = () => {
     { id: "injury", icon: Camera, title: t("injuryScanner"), desc: t("injuryScannerDesc"), color: "from-red-500 to-orange-400", tag: t("aiVision") },
     { id: "report", icon: FileSearch, title: t("reportAnalyzer"), desc: t("reportAnalyzerDesc"), color: "from-blue-500 to-cyan-400", tag: t("ocrAI") },
     { id: "tips", icon: Stethoscope, title: t("healthTips"), desc: t("healthTipsDesc"), color: "from-emerald-500 to-teal-400", tag: t("personalized") },
+    { id: "cardio", icon: HeartPulse, title: "AI Cardioshield", desc: "Heart sound screening with AI murmur & arrhythmia detection", color: "from-pink-500 to-rose-400", tag: "Audio AI" },
   ];
 
   const reset = () => { setResult(null); setInputText(""); setSelectedImage(null); };
@@ -202,6 +204,12 @@ const HealthHub = () => {
                 {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t("generating")}</> : <><Sparkles className="w-4 h-4 mr-2" />{t("generateTips")}</>}
               </Button>
               {result && <ResultCard result={result} onClose={reset} t={t} />}
+            </motion.div>
+          )}
+          {activeFeature === "cardio" && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="glass-card rounded-3xl p-5 overflow-hidden">
+              <div className="flex items-center gap-2 mb-4"><HeartPulse className="w-4 h-4 text-primary" /><h3 className="text-sm font-bold text-foreground">AI Cardioshield</h3></div>
+              <CardioShield />
             </motion.div>
           )}
         </AnimatePresence>
