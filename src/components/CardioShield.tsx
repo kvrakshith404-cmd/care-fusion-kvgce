@@ -8,16 +8,16 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Phase = "idle" | "instructions" | "countdown" | "recording" | "paused" | "review" | "processing" | "result";
 type Risk = "Low" | "Medium" | "High";
+type ResultKey = "normal" | "murmur" | "arrhythmia" | "valve";
 
 interface AnalysisResult {
-  status: string;
+  key: ResultKey;
   confidence: number;
   risk_level: Risk;
-  findings: string;
-  recommendations: string;
 }
 
 const INSTRUCTIONS = [
@@ -40,17 +40,101 @@ const PROCESSING_STEPS = [
   "MFCC Feature Extraction",
 ];
 
-function speak(text: string) {
+function speak(text: string, lang: string = "en-US") {
   try {
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "en-US";
+    u.lang = lang;
     u.rate = 0.95;
     window.speechSynthesis.speak(u);
   } catch {}
 }
 
+type LangCode = "en" | "hi" | "kn";
+const speechLang = (l: LangCode) => (l === "hi" ? "hi-IN" : l === "kn" ? "kn-IN" : "en-US");
+
+const UI_TEXT: Record<LangCode, Record<string, string>> = {
+  en: {
+    duration: "Recording Duration", start: "Start", upload: "Upload",
+    viewHistory: "View previous heart analyses", gettingReady: "Getting ready…",
+    holdPhone: "Please hold your phone close to your chest.", getReady: "Get ready…",
+    recording: "Recording", paused: "Paused", audioQuality: "Audio Quality",
+    pause: "Pause", resume: "Resume", stop: "Stop", recordingReady: "Recording ready",
+    replay: "Replay", del: "Delete", redo: "Redo", analyze: "Analyze Heart Sound",
+    analyzing: "Analyzing your heart sound…", takesSeconds: "This usually takes a few seconds.",
+    riskLevel: "Risk Level", confidence: "Confidence Score",
+    whatWeFound: "WHAT WE FOUND", nextSteps: "WHAT TO DO NEXT",
+    cardiacCare: "We recommend a heart check-up",
+    nearbyHospitals: "Nearby Hospitals", emergencyCall: "Emergency Call",
+    newRecording: "New Recording", historyTitle: "Heart Analysis History",
+    noHistory: "No previous analyses yet.",
+    qualityExcellent: "Excellent", qualityGood: "Good", qualityFair: "Fair", qualityPoor: "Poor",
+    riskLow: "Low", riskMedium: "Medium", riskHigh: "High",
+  },
+  hi: {
+    duration: "रिकॉर्डिंग अवधि", start: "शुरू करें", upload: "अपलोड",
+    viewHistory: "पिछले हृदय विश्लेषण देखें", gettingReady: "तैयार हो रहे हैं…",
+    holdPhone: "कृपया अपना फ़ोन छाती के पास रखें।", getReady: "तैयार रहें…",
+    recording: "रिकॉर्डिंग", paused: "रोका गया", audioQuality: "ऑडियो गुणवत्ता",
+    pause: "रोकें", resume: "जारी रखें", stop: "रोकें", recordingReady: "रिकॉर्डिंग तैयार है",
+    replay: "दोबारा सुनें", del: "हटाएं", redo: "फिर से", analyze: "हृदय ध्वनि का विश्लेषण करें",
+    analyzing: "आपकी हृदय ध्वनि का विश्लेषण किया जा रहा है…", takesSeconds: "इसमें कुछ सेकंड लगते हैं।",
+    riskLevel: "जोखिम स्तर", confidence: "विश्वास स्कोर",
+    whatWeFound: "हमने क्या पाया", nextSteps: "आगे क्या करें",
+    cardiacCare: "हम हृदय जांच की सलाह देते हैं",
+    nearbyHospitals: "नज़दीकी अस्पताल", emergencyCall: "आपातकालीन कॉल",
+    newRecording: "नई रिकॉर्डिंग", historyTitle: "हृदय विश्लेषण इतिहास",
+    noHistory: "अभी तक कोई विश्लेषण नहीं।",
+    qualityExcellent: "बहुत अच्छी", qualityGood: "अच्छी", qualityFair: "ठीक", qualityPoor: "खराब",
+    riskLow: "कम", riskMedium: "मध्यम", riskHigh: "अधिक",
+  },
+  kn: {
+    duration: "ರೆಕಾರ್ಡಿಂಗ್ ಅವಧಿ", start: "ಪ್ರಾರಂಭಿಸಿ", upload: "ಅಪ್‌ಲೋಡ್",
+    viewHistory: "ಹಿಂದಿನ ಹೃದಯ ವಿಶ್ಲೇಷಣೆಗಳನ್ನು ನೋಡಿ", gettingReady: "ಸಿದ್ಧವಾಗುತ್ತಿದೆ…",
+    holdPhone: "ದಯವಿಟ್ಟು ನಿಮ್ಮ ಫೋನ್ ಅನ್ನು ಎದೆಯ ಹತ್ತಿರ ಹಿಡಿಯಿರಿ.", getReady: "ಸಿದ್ಧರಾಗಿ…",
+    recording: "ರೆಕಾರ್ಡಿಂಗ್", paused: "ವಿರಾಮ", audioQuality: "ಆಡಿಯೋ ಗುಣಮಟ್ಟ",
+    pause: "ವಿರಾಮ", resume: "ಮುಂದುವರಿಸಿ", stop: "ನಿಲ್ಲಿಸಿ", recordingReady: "ರೆಕಾರ್ಡಿಂಗ್ ಸಿದ್ಧವಾಗಿದೆ",
+    replay: "ಮತ್ತೆ ಕೇಳಿ", del: "ಅಳಿಸಿ", redo: "ಮತ್ತೆ ಮಾಡಿ", analyze: "ಹೃದಯ ಧ್ವನಿ ವಿಶ್ಲೇಷಿಸಿ",
+    analyzing: "ನಿಮ್ಮ ಹೃದಯ ಧ್ವನಿಯನ್ನು ವಿಶ್ಲೇಷಿಸಲಾಗುತ್ತಿದೆ…", takesSeconds: "ಇದು ಕೆಲವು ಸೆಕೆಂಡುಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳುತ್ತದೆ.",
+    riskLevel: "ಅಪಾಯ ಮಟ್ಟ", confidence: "ವಿಶ್ವಾಸ ಸ್ಕೋರ್",
+    whatWeFound: "ನಾವು ಏನು ಕಂಡುಕೊಂಡೆವು", nextSteps: "ಮುಂದೆ ಏನು ಮಾಡಬೇಕು",
+    cardiacCare: "ಹೃದಯ ತಪಾಸಣೆಯನ್ನು ಶಿಫಾರಸು ಮಾಡುತ್ತೇವೆ",
+    nearbyHospitals: "ಹತ್ತಿರದ ಆಸ್ಪತ್ರೆಗಳು", emergencyCall: "ತುರ್ತು ಕರೆ",
+    newRecording: "ಹೊಸ ರೆಕಾರ್ಡಿಂಗ್", historyTitle: "ಹೃದಯ ವಿಶ್ಲೇಷಣೆ ಇತಿಹಾಸ",
+    noHistory: "ಇನ್ನೂ ಯಾವುದೇ ವಿಶ್ಲೇಷಣೆ ಇಲ್ಲ.",
+    qualityExcellent: "ಅತ್ಯುತ್ತಮ", qualityGood: "ಒಳ್ಳೆಯದು", qualityFair: "ಸಾಧಾರಣ", qualityPoor: "ಕಳಪೆ",
+    riskLow: "ಕಡಿಮೆ", riskMedium: "ಮಧ್ಯಮ", riskHigh: "ಹೆಚ್ಚು",
+  },
+};
+
+const RESULTS: Record<ResultKey, Record<LangCode, { status: string; findings: string; recommendations: string }>> = {
+  normal: {
+    en: { status: "Your heart sounds normal", findings: "Your heartbeat sounds steady and regular. We did not hear any unusual sounds.", recommendations: "Keep up healthy habits — stay active, eat well, and get a yearly check-up." },
+    hi: { status: "आपका हृदय सामान्य लगता है", findings: "आपकी धड़कन स्थिर और नियमित है। हमें कोई असामान्य आवाज़ नहीं सुनाई दी।", recommendations: "स्वस्थ आदतें बनाए रखें — सक्रिय रहें, अच्छा खाएं, और हर साल जांच कराएं।" },
+    kn: { status: "ನಿಮ್ಮ ಹೃದಯ ಸಾಮಾನ್ಯವಾಗಿದೆ", findings: "ನಿಮ್ಮ ಹೃದಯ ಬಡಿತ ಸ್ಥಿರ ಮತ್ತು ನಿಯಮಿತವಾಗಿದೆ. ಯಾವುದೇ ಅಸಾಮಾನ್ಯ ಶಬ್ದ ಕೇಳಿಸಲಿಲ್ಲ.", recommendations: "ಆರೋಗ್ಯಕರ ಅಭ್ಯಾಸಗಳನ್ನು ಮುಂದುವರಿಸಿ — ಸಕ್ರಿಯವಾಗಿರಿ, ಚೆನ್ನಾಗಿ ತಿನ್ನಿರಿ, ಮತ್ತು ವಾರ್ಷಿಕ ತಪಾಸಣೆ ಮಾಡಿಸಿ." },
+  },
+  murmur: {
+    en: { status: "A soft extra sound was heard", findings: "We heard a gentle whooshing sound between heartbeats. This is often harmless, but a doctor should confirm.", recommendations: "Please visit a doctor for a simple chest check. Mention this if you feel tired or breathless." },
+    hi: { status: "एक हल्की अतिरिक्त आवाज़ सुनाई दी", findings: "धड़कनों के बीच एक हल्की आवाज़ सुनाई दी। यह अक्सर हानिरहित होती है, पर डॉक्टर से जांच कराना अच्छा है।", recommendations: "कृपया डॉक्टर से छाती की जांच कराएं। अगर थकान या सांस फूले तो बताएं।" },
+    kn: { status: "ಒಂದು ಮೃದು ಹೆಚ್ಚುವರಿ ಶಬ್ದ ಕೇಳಿಸಿತು", findings: "ಹೃದಯ ಬಡಿತಗಳ ನಡುವೆ ಮೃದು ಶಬ್ದ ಕೇಳಿಸಿತು. ಇದು ಸಾಮಾನ್ಯವಾಗಿ ಹಾನಿಕಾರಕವಲ್ಲ, ಆದರೆ ವೈದ್ಯರಿಂದ ತಪಾಸಣೆ ಮಾಡಿಸಿ.", recommendations: "ದಯವಿಟ್ಟು ವೈದ್ಯರನ್ನು ಭೇಟಿ ಮಾಡಿ. ಆಯಾಸ ಅಥವಾ ಉಸಿರಾಟದ ತೊಂದರೆ ಇದ್ದರೆ ತಿಳಿಸಿ." },
+  },
+  arrhythmia: {
+    en: { status: "Your heartbeat is a little uneven", findings: "Your heartbeat is not always at the same pace. Sometimes this happens with stress, caffeine, or lack of sleep.", recommendations: "Please see a doctor for a simple ECG test. Try to rest well and avoid too much tea or coffee." },
+    hi: { status: "आपकी धड़कन थोड़ी असमान है", findings: "आपकी धड़कन हर बार एक जैसी नहीं है। यह कभी-कभी तनाव, चाय/कॉफी या नींद की कमी से होता है।", recommendations: "कृपया डॉक्टर से ईसीजी जांच कराएं। अच्छी नींद लें और ज़्यादा चाय/कॉफी से बचें।" },
+    kn: { status: "ನಿಮ್ಮ ಹೃದಯ ಬಡಿತ ಸ್ವಲ್ಪ ಅಸಮವಾಗಿದೆ", findings: "ನಿಮ್ಮ ಹೃದಯ ಬಡಿತ ಯಾವಾಗಲೂ ಒಂದೇ ವೇಗದಲ್ಲಿಲ್ಲ. ಒತ್ತಡ, ಕಾಫಿ ಅಥವಾ ನಿದ್ರೆಯ ಕೊರತೆಯಿಂದ ಆಗಬಹುದು.", recommendations: "ದಯವಿಟ್ಟು ECG ಪರೀಕ್ಷೆಗಾಗಿ ವೈದ್ಯರನ್ನು ಭೇಟಿ ಮಾಡಿ. ಚೆನ್ನಾಗಿ ವಿಶ್ರಾಂತಿ ಪಡೆಯಿರಿ." },
+  },
+  valve: {
+    en: { status: "Unusual heart sound detected", findings: "We heard a sound that may come from a heart valve. This needs to be checked by a heart doctor soon.", recommendations: "Please see a heart doctor (cardiologist) soon. An echo test of the heart is strongly advised." },
+    hi: { status: "असामान्य हृदय ध्वनि मिली", findings: "एक आवाज़ सुनाई दी जो हृदय वाल्व से हो सकती है। इसे जल्द हृदय डॉक्टर से जांच कराना ज़रूरी है।", recommendations: "कृपया जल्द हृदय रोग विशेषज्ञ से मिलें। हृदय का इको टेस्ट कराने की सलाह है।" },
+    kn: { status: "ಅಸಾಮಾನ್ಯ ಹೃದಯ ಶಬ್ದ ಪತ್ತೆಯಾಗಿದೆ", findings: "ಹೃದಯದ ಕವಾಟದಿಂದ ಬರಬಹುದಾದ ಶಬ್ದ ಕೇಳಿಸಿತು. ಶೀಘ್ರವೇ ಹೃದಯ ತಜ್ಞರಿಂದ ಪರೀಕ್ಷೆ ಮಾಡಿಸಿ.", recommendations: "ದಯವಿಟ್ಟು ಶೀಘ್ರವೇ ಹೃದಯ ತಜ್ಞರನ್ನು ಭೇಟಿ ಮಾಡಿ. ಹೃದಯದ ಎಕೋ ಪರೀಕ್ಷೆ ಶಿಫಾರಸು ಮಾಡಲಾಗಿದೆ." },
+  },
+};
+
 const CardioShield = () => {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const lang: LangCode = (["en", "hi", "kn"] as const).includes(language as LangCode) ? (language as LangCode) : "en";
+  const T = UI_TEXT[lang];
+  const sLang = speechLang(lang);
   const [phase, setPhase] = useState<Phase>("idle");
   const [duration, setDuration] = useState<10 | 20 | 30>(20);
   const [elapsed, setElapsed] = useState(0);
@@ -75,6 +159,8 @@ const CardioShield = () => {
   const cueRef = useRef<number | null>(null);
   const playerRef = useRef<HTMLAudioElement | null>(null);
 
+  const localized = result ? RESULTS[result.key][lang] : null;
+
   useEffect(() => {
     return () => cleanup();
   }, []);
@@ -96,7 +182,7 @@ const CardioShield = () => {
 
   const startInstructions = async () => {
     setPhase("instructions");
-    INSTRUCTIONS.forEach((t, i) => setTimeout(() => speak(t), i * 2200));
+    INSTRUCTIONS.forEach((t, i) => setTimeout(() => speak(t, sLang), i * 2200));
     setTimeout(() => beginCountdown(), INSTRUCTIONS.length * 2200);
   };
 
@@ -181,10 +267,10 @@ const CardioShield = () => {
 
   const runCues = () => {
     let i = 0;
-    speak(LIVE_CUES[0]);
+    speak(LIVE_CUES[0], sLang);
     cueRef.current = window.setInterval(() => {
       i = (i + 1) % LIVE_CUES.length;
-      speak(LIVE_CUES[i]);
+      speak(LIVE_CUES[i], sLang);
     }, 5000);
   };
 
@@ -208,7 +294,7 @@ const CardioShield = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (cueRef.current) clearInterval(cueRef.current);
     window.speechSynthesis.cancel();
-    speak("Recording completed successfully.");
+    speak("Recording completed.", sLang);
   };
 
   const handleRecordingStop = async () => {
@@ -256,36 +342,24 @@ const CardioShield = () => {
     // Simulated AI result (weighted toward normal)
     const roll = Math.random();
     let r: AnalysisResult;
-    if (roll < 0.6) {
-      r = { status: "Normal Heart Sound", confidence: 88 + Math.floor(Math.random() * 10), risk_level: "Low",
-        findings: "Regular S1 and S2 sounds detected with consistent rhythm. No abnormal murmurs or extra sounds identified.",
-        recommendations: "Maintain regular physical activity, balanced diet, and routine annual checkups." };
-    } else if (roll < 0.8) {
-      r = { status: "Possible Heart Murmur", confidence: 70 + Math.floor(Math.random() * 15), risk_level: "Medium",
-        findings: "A faint swishing sound detected between S1 and S2 cycles. May indicate a benign flow murmur.",
-        recommendations: "Schedule a clinical auscultation. Consider an echocardiogram if symptoms (fatigue, shortness of breath) appear." };
-    } else if (roll < 0.92) {
-      r = { status: "Possible Arrhythmia", confidence: 68 + Math.floor(Math.random() * 18), risk_level: "Medium",
-        findings: "Irregular interval pattern detected between heartbeats. Rhythm variability above normal range.",
-        recommendations: "Consult a cardiologist for an ECG. Limit caffeine and monitor for palpitations." };
-    } else {
-      r = { status: "Possible Valve Abnormality", confidence: 72 + Math.floor(Math.random() * 15), risk_level: "High",
-        findings: "Atypical valve closure sound and elevated cardiac risk indicators detected.",
-        recommendations: "Seek prompt cardiology evaluation. An echocardiogram is strongly advised." };
-    }
+    if (roll < 0.6) r = { key: "normal", confidence: 88 + Math.floor(Math.random() * 10), risk_level: "Low" };
+    else if (roll < 0.8) r = { key: "murmur", confidence: 70 + Math.floor(Math.random() * 15), risk_level: "Medium" };
+    else if (roll < 0.92) r = { key: "arrhythmia", confidence: 68 + Math.floor(Math.random() * 18), risk_level: "Medium" };
+    else r = { key: "valve", confidence: 72 + Math.floor(Math.random() * 15), risk_level: "High" };
     setResult(r);
     setPhase("result");
 
     // Save to DB
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      const en = RESULTS[r.key].en;
       await supabase.from("heart_analyses").insert({
         user_id: user.id,
-        status: r.status,
+        status: en.status,
         confidence: r.confidence,
         risk_level: r.risk_level,
-        findings: r.findings,
-        recommendations: r.recommendations,
+        findings: en.findings,
+        recommendations: en.recommendations,
         duration_seconds: Math.round(elapsed) || duration,
       });
     }
@@ -308,7 +382,7 @@ const CardioShield = () => {
       {phase === "idle" && (
         <>
           <div>
-            <p className="text-xs font-semibold text-foreground mb-2">Recording Duration</p>
+            <p className="text-xs font-semibold text-foreground mb-2">{T.duration}</p>
             <div className="flex gap-2">
               {[10, 20, 30].map((d) => (
                 <button key={d} onClick={() => setDuration(d as any)}
@@ -320,16 +394,16 @@ const CardioShield = () => {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button onClick={startInstructions} className="h-11 rounded-2xl gradient-primary text-primary-foreground font-semibold glow-sm">
-              <Mic className="w-4 h-4 mr-1" /> Start
+              <Mic className="w-4 h-4 mr-1" /> {T.start}
             </Button>
             <label className="h-11 rounded-2xl bg-secondary/40 flex items-center justify-center text-foreground font-semibold text-sm cursor-pointer">
-              <Upload className="w-4 h-4 mr-1" /> Upload
+              <Upload className="w-4 h-4 mr-1" /> {T.upload}
               <input type="file" accept="audio/*" className="hidden" onChange={handleUpload} />
             </label>
           </div>
           <button onClick={async () => { await loadHistory(); setShowHistory(true); }}
             className="text-xs text-primary font-semibold underline w-full text-center">
-            View previous heart analyses
+            {T.viewHistory}
           </button>
         </>
       )}
@@ -338,8 +412,8 @@ const CardioShield = () => {
       {phase === "instructions" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-8 text-center space-y-3">
           <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
-          <p className="text-sm font-bold text-foreground">Getting ready…</p>
-          <p className="text-xs text-muted-foreground">Please hold your phone close to your chest.</p>
+          <p className="text-sm font-bold text-foreground">{T.gettingReady}</p>
+          <p className="text-xs text-muted-foreground">{T.holdPhone}</p>
         </motion.div>
       )}
 
@@ -348,7 +422,7 @@ const CardioShield = () => {
         <motion.div key={countdown} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
           className="text-center py-8">
           <div className="text-6xl font-extrabold text-primary">{countdown > 0 ? countdown : "GO"}</div>
-          <p className="text-xs text-muted-foreground mt-2">Get ready…</p>
+          <p className="text-xs text-muted-foreground mt-2">{T.getReady}</p>
         </motion.div>
       )}
 
@@ -358,7 +432,7 @@ const CardioShield = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${phase === "recording" ? "bg-red-500 animate-pulse" : "bg-amber-500"}`} />
-              <span className="text-xs font-bold text-foreground">{phase === "recording" ? "Recording" : "Paused"}</span>
+              <span className="text-xs font-bold text-foreground">{phase === "recording" ? T.recording : T.paused}</span>
             </div>
             <span className="text-xs font-mono text-foreground">{fmt(elapsed)} / {fmt(duration)}</span>
           </div>
@@ -373,8 +447,8 @@ const CardioShield = () => {
 
           {/* Quality */}
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Audio Quality</span>
-            <span className={`font-bold ${quality === "Excellent" || quality === "Good" ? "text-green-500" : quality === "Fair" ? "text-amber-500" : "text-red-500"}`}>{quality}</span>
+            <span className="text-muted-foreground">{T.audioQuality}</span>
+            <span className={`font-bold ${quality === "Excellent" || quality === "Good" ? "text-green-500" : quality === "Fair" ? "text-amber-500" : "text-red-500"}`}>{quality === "Excellent" ? T.qualityExcellent : quality === "Good" ? T.qualityGood : quality === "Fair" ? T.qualityFair : T.qualityPoor}</span>
           </div>
 
           <div className="h-1.5 rounded-full bg-secondary/40 overflow-hidden">
@@ -383,11 +457,11 @@ const CardioShield = () => {
 
           <div className="grid grid-cols-2 gap-2">
             {phase === "recording" ? (
-              <Button onClick={pauseRecording} variant="outline" className="h-10 rounded-xl"><Pause className="w-4 h-4 mr-1" />Pause</Button>
+              <Button onClick={pauseRecording} variant="outline" className="h-10 rounded-xl"><Pause className="w-4 h-4 mr-1" />{T.pause}</Button>
             ) : (
-              <Button onClick={resumeRecording} variant="outline" className="h-10 rounded-xl"><Play className="w-4 h-4 mr-1" />Resume</Button>
+              <Button onClick={resumeRecording} variant="outline" className="h-10 rounded-xl"><Play className="w-4 h-4 mr-1" />{T.resume}</Button>
             )}
-            <Button onClick={stopRecording} className="h-10 rounded-xl bg-destructive text-destructive-foreground"><Square className="w-4 h-4 mr-1" />Stop</Button>
+            <Button onClick={stopRecording} className="h-10 rounded-xl bg-destructive text-destructive-foreground"><Square className="w-4 h-4 mr-1" />{T.stop}</Button>
           </div>
         </div>
       )}
@@ -397,16 +471,16 @@ const CardioShield = () => {
         <div className="space-y-3">
           <div className="p-3 rounded-2xl bg-secondary/30 flex items-center gap-2">
             <Heart className="w-4 h-4 text-primary" />
-            <span className="text-xs font-bold flex-1">Recording ready</span>
+            <span className="text-xs font-bold flex-1">{T.recordingReady}</span>
           </div>
           <audio ref={playerRef} src={audioUrl} controls className="w-full" />
           <div className="grid grid-cols-3 gap-2">
-            <Button onClick={() => playerRef.current?.play()} variant="outline" className="h-10 rounded-xl text-xs"><Play className="w-4 h-4 mr-1" />Replay</Button>
-            <Button onClick={deleteRecording} variant="outline" className="h-10 rounded-xl text-xs text-destructive"><Trash2 className="w-4 h-4 mr-1" />Delete</Button>
-            <Button onClick={reset} variant="outline" className="h-10 rounded-xl text-xs"><RotateCcw className="w-4 h-4 mr-1" />Redo</Button>
+            <Button onClick={() => playerRef.current?.play()} variant="outline" className="h-10 rounded-xl text-xs"><Play className="w-4 h-4 mr-1" />{T.replay}</Button>
+            <Button onClick={deleteRecording} variant="outline" className="h-10 rounded-xl text-xs text-destructive"><Trash2 className="w-4 h-4 mr-1" />{T.del}</Button>
+            <Button onClick={reset} variant="outline" className="h-10 rounded-xl text-xs"><RotateCcw className="w-4 h-4 mr-1" />{T.redo}</Button>
           </div>
           <Button onClick={runAnalysis} className="w-full h-11 rounded-2xl gradient-primary text-primary-foreground font-semibold glow-sm">
-            <Sparkles className="w-4 h-4 mr-1" /> Analyze Heart Sound
+            <Sparkles className="w-4 h-4 mr-1" /> {T.analyze}
           </Button>
         </div>
       )}
@@ -415,8 +489,8 @@ const CardioShield = () => {
       {phase === "processing" && (
         <div className="py-10 text-center space-y-3">
           <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
-          <p className="text-sm font-bold text-foreground">Analyzing your heart sound…</p>
-          <p className="text-xs text-muted-foreground">This usually takes a few seconds.</p>
+          <p className="text-sm font-bold text-foreground">{T.analyzing}</p>
+          <p className="text-xs text-muted-foreground">{T.takesSeconds}</p>
           <div className="h-1.5 max-w-[200px] mx-auto rounded-full bg-secondary/40 overflow-hidden">
             <div className="h-full bg-primary transition-all" style={{ width: `${(processingStep / PROCESSING_STEPS.length) * 100}%` }} />
           </div>
@@ -430,18 +504,18 @@ const CardioShield = () => {
             <div className="flex items-center gap-2 mb-2">
               {result.risk_level === "Low" ? <CheckCircle className={`w-5 h-5 ${riskColor}`} />
                 : <AlertTriangle className={`w-5 h-5 ${riskColor}`} />}
-              <h4 className="text-sm font-bold text-foreground">{result.status}</h4>
+              <h4 className="text-sm font-bold text-foreground">{localized?.status}</h4>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Risk Level</span>
-              <span className={`font-bold ${riskColor}`}>{result.risk_level}</span>
+              <span className="text-muted-foreground">{T.riskLevel}</span>
+              <span className={`font-bold ${riskColor}`}>{result.risk_level === "Low" ? T.riskLow : result.risk_level === "Medium" ? T.riskMedium : T.riskHigh}</span>
             </div>
           </div>
 
           {/* Confidence meter */}
           <div className="p-3 rounded-2xl bg-secondary/30">
             <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-muted-foreground">Confidence Score</span>
+              <span className="text-muted-foreground">{T.confidence}</span>
               <span className="font-bold text-foreground">{result.confidence}%</span>
             </div>
             <div className="h-2 rounded-full bg-background overflow-hidden">
@@ -453,14 +527,14 @@ const CardioShield = () => {
           {/* Findings */}
           <div className="p-3 rounded-2xl bg-secondary/30">
             <div className="flex items-center gap-2 mb-1"><Activity className="w-3.5 h-3.5 text-primary" />
-              <p className="text-[10px] font-bold text-muted-foreground">WHAT WE FOUND</p></div>
-            <p className="text-xs text-foreground leading-relaxed">{result.findings}</p>
+              <p className="text-[10px] font-bold text-muted-foreground">{T.whatWeFound}</p></div>
+            <p className="text-xs text-foreground leading-relaxed">{localized?.findings}</p>
           </div>
 
           {/* Recommendations */}
           <div className="p-3 rounded-2xl bg-primary/5 border border-primary/20">
-            <p className="text-[10px] font-bold text-primary mb-1">RECOMMENDED NEXT STEPS</p>
-            <p className="text-xs text-foreground leading-relaxed">{result.recommendations}</p>
+            <p className="text-[10px] font-bold text-primary mb-1">{T.nextSteps}</p>
+            <p className="text-xs text-foreground leading-relaxed">{localized?.recommendations}</p>
           </div>
 
           {/* Hospital assistance for medium/high */}
@@ -468,21 +542,21 @@ const CardioShield = () => {
             <div className="p-3 rounded-2xl bg-red-500/5 border border-red-500/20 space-y-2">
               <div className="flex items-center gap-2">
                 <Hospital className="w-4 h-4 text-red-500" />
-                <p className="text-xs font-bold text-foreground">Cardiac care recommended</p>
+                <p className="text-xs font-bold text-foreground">{T.cardiacCare}</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Button onClick={() => navigate("/map")} className="h-9 rounded-xl text-xs bg-red-500 hover:bg-red-600 text-white">
-                  Nearby Hospitals
+                  {T.nearbyHospitals}
                 </Button>
                 <a href="tel:108" className="h-9 rounded-xl text-xs bg-foreground text-background flex items-center justify-center font-semibold">
-                  Emergency Call
+                  {T.emergencyCall}
                 </a>
               </div>
             </div>
           )}
 
           <Button onClick={reset} variant="outline" className="w-full h-10 rounded-xl text-xs">
-            <RotateCcw className="w-4 h-4 mr-1" /> New Recording
+            <RotateCcw className="w-4 h-4 mr-1" /> {T.newRecording}
           </Button>
         </motion.div>
       )}
@@ -497,11 +571,11 @@ const CardioShield = () => {
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-md bg-background rounded-3xl p-5 max-h-[80vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-foreground">Heart Analysis History</h3>
+                <h3 className="font-bold text-foreground">{T.historyTitle}</h3>
                 <button onClick={() => setShowHistory(false)}><X className="w-4 h-4" /></button>
               </div>
               {history.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-6">No previous analyses yet.</p>
+                <p className="text-xs text-muted-foreground text-center py-6">{T.noHistory}</p>
               ) : history.map((h) => (
                 <div key={h.id} className="p-3 rounded-2xl bg-secondary/30 mb-2">
                   <div className="flex items-center justify-between mb-1">
