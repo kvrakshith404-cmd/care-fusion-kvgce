@@ -382,7 +382,7 @@ const CardioShield = () => {
       {phase === "idle" && (
         <>
           <div>
-            <p className="text-xs font-semibold text-foreground mb-2">Recording Duration</p>
+            <p className="text-xs font-semibold text-foreground mb-2">{T.duration}</p>
             <div className="flex gap-2">
               {[10, 20, 30].map((d) => (
                 <button key={d} onClick={() => setDuration(d as any)}
@@ -394,16 +394,16 @@ const CardioShield = () => {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button onClick={startInstructions} className="h-11 rounded-2xl gradient-primary text-primary-foreground font-semibold glow-sm">
-              <Mic className="w-4 h-4 mr-1" /> Start
+              <Mic className="w-4 h-4 mr-1" /> {T.start}
             </Button>
             <label className="h-11 rounded-2xl bg-secondary/40 flex items-center justify-center text-foreground font-semibold text-sm cursor-pointer">
-              <Upload className="w-4 h-4 mr-1" /> Upload
+              <Upload className="w-4 h-4 mr-1" /> {T.upload}
               <input type="file" accept="audio/*" className="hidden" onChange={handleUpload} />
             </label>
           </div>
           <button onClick={async () => { await loadHistory(); setShowHistory(true); }}
             className="text-xs text-primary font-semibold underline w-full text-center">
-            View previous heart analyses
+            {T.viewHistory}
           </button>
         </>
       )}
@@ -412,8 +412,8 @@ const CardioShield = () => {
       {phase === "instructions" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-8 text-center space-y-3">
           <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
-          <p className="text-sm font-bold text-foreground">Getting ready…</p>
-          <p className="text-xs text-muted-foreground">Please hold your phone close to your chest.</p>
+          <p className="text-sm font-bold text-foreground">{T.gettingReady}</p>
+          <p className="text-xs text-muted-foreground">{T.holdPhone}</p>
         </motion.div>
       )}
 
@@ -422,7 +422,7 @@ const CardioShield = () => {
         <motion.div key={countdown} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
           className="text-center py-8">
           <div className="text-6xl font-extrabold text-primary">{countdown > 0 ? countdown : "GO"}</div>
-          <p className="text-xs text-muted-foreground mt-2">Get ready…</p>
+          <p className="text-xs text-muted-foreground mt-2">{T.getReady}</p>
         </motion.div>
       )}
 
@@ -432,7 +432,7 @@ const CardioShield = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${phase === "recording" ? "bg-red-500 animate-pulse" : "bg-amber-500"}`} />
-              <span className="text-xs font-bold text-foreground">{phase === "recording" ? "Recording" : "Paused"}</span>
+              <span className="text-xs font-bold text-foreground">{phase === "recording" ? T.recording : T.paused}</span>
             </div>
             <span className="text-xs font-mono text-foreground">{fmt(elapsed)} / {fmt(duration)}</span>
           </div>
@@ -447,8 +447,8 @@ const CardioShield = () => {
 
           {/* Quality */}
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Audio Quality</span>
-            <span className={`font-bold ${quality === "Excellent" || quality === "Good" ? "text-green-500" : quality === "Fair" ? "text-amber-500" : "text-red-500"}`}>{quality}</span>
+            <span className="text-muted-foreground">{T.audioQuality}</span>
+            <span className={`font-bold ${quality === "Excellent" || quality === "Good" ? "text-green-500" : quality === "Fair" ? "text-amber-500" : "text-red-500"}`}>{quality === "Excellent" ? T.qualityExcellent : quality === "Good" ? T.qualityGood : quality === "Fair" ? T.qualityFair : T.qualityPoor}</span>
           </div>
 
           <div className="h-1.5 rounded-full bg-secondary/40 overflow-hidden">
@@ -457,11 +457,11 @@ const CardioShield = () => {
 
           <div className="grid grid-cols-2 gap-2">
             {phase === "recording" ? (
-              <Button onClick={pauseRecording} variant="outline" className="h-10 rounded-xl"><Pause className="w-4 h-4 mr-1" />Pause</Button>
+              <Button onClick={pauseRecording} variant="outline" className="h-10 rounded-xl"><Pause className="w-4 h-4 mr-1" />{T.pause}</Button>
             ) : (
-              <Button onClick={resumeRecording} variant="outline" className="h-10 rounded-xl"><Play className="w-4 h-4 mr-1" />Resume</Button>
+              <Button onClick={resumeRecording} variant="outline" className="h-10 rounded-xl"><Play className="w-4 h-4 mr-1" />{T.resume}</Button>
             )}
-            <Button onClick={stopRecording} className="h-10 rounded-xl bg-destructive text-destructive-foreground"><Square className="w-4 h-4 mr-1" />Stop</Button>
+            <Button onClick={stopRecording} className="h-10 rounded-xl bg-destructive text-destructive-foreground"><Square className="w-4 h-4 mr-1" />{T.stop}</Button>
           </div>
         </div>
       )}
@@ -471,16 +471,16 @@ const CardioShield = () => {
         <div className="space-y-3">
           <div className="p-3 rounded-2xl bg-secondary/30 flex items-center gap-2">
             <Heart className="w-4 h-4 text-primary" />
-            <span className="text-xs font-bold flex-1">Recording ready</span>
+            <span className="text-xs font-bold flex-1">{T.recordingReady}</span>
           </div>
           <audio ref={playerRef} src={audioUrl} controls className="w-full" />
           <div className="grid grid-cols-3 gap-2">
-            <Button onClick={() => playerRef.current?.play()} variant="outline" className="h-10 rounded-xl text-xs"><Play className="w-4 h-4 mr-1" />Replay</Button>
-            <Button onClick={deleteRecording} variant="outline" className="h-10 rounded-xl text-xs text-destructive"><Trash2 className="w-4 h-4 mr-1" />Delete</Button>
-            <Button onClick={reset} variant="outline" className="h-10 rounded-xl text-xs"><RotateCcw className="w-4 h-4 mr-1" />Redo</Button>
+            <Button onClick={() => playerRef.current?.play()} variant="outline" className="h-10 rounded-xl text-xs"><Play className="w-4 h-4 mr-1" />{T.replay}</Button>
+            <Button onClick={deleteRecording} variant="outline" className="h-10 rounded-xl text-xs text-destructive"><Trash2 className="w-4 h-4 mr-1" />{T.del}</Button>
+            <Button onClick={reset} variant="outline" className="h-10 rounded-xl text-xs"><RotateCcw className="w-4 h-4 mr-1" />{T.redo}</Button>
           </div>
           <Button onClick={runAnalysis} className="w-full h-11 rounded-2xl gradient-primary text-primary-foreground font-semibold glow-sm">
-            <Sparkles className="w-4 h-4 mr-1" /> Analyze Heart Sound
+            <Sparkles className="w-4 h-4 mr-1" /> {T.analyze}
           </Button>
         </div>
       )}
@@ -489,8 +489,8 @@ const CardioShield = () => {
       {phase === "processing" && (
         <div className="py-10 text-center space-y-3">
           <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
-          <p className="text-sm font-bold text-foreground">Analyzing your heart sound…</p>
-          <p className="text-xs text-muted-foreground">This usually takes a few seconds.</p>
+          <p className="text-sm font-bold text-foreground">{T.analyzing}</p>
+          <p className="text-xs text-muted-foreground">{T.takesSeconds}</p>
           <div className="h-1.5 max-w-[200px] mx-auto rounded-full bg-secondary/40 overflow-hidden">
             <div className="h-full bg-primary transition-all" style={{ width: `${(processingStep / PROCESSING_STEPS.length) * 100}%` }} />
           </div>
