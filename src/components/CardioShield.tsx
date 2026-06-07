@@ -135,7 +135,6 @@ const CardioShield = () => {
   const lang: LangCode = (["en", "hi", "kn"] as const).includes(language as LangCode) ? (language as LangCode) : "en";
   const T = UI_TEXT[lang];
   const sLang = speechLang(lang);
-  const localized = result ? RESULTS[result.key][lang] : null;
   const [phase, setPhase] = useState<Phase>("idle");
   const [duration, setDuration] = useState<10 | 20 | 30>(20);
   const [elapsed, setElapsed] = useState(0);
