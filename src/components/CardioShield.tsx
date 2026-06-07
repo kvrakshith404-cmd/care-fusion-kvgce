@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart, Mic, Upload, Play, Pause, Square, Trash2, RotateCcw, Loader2,
-  CheckCircle, AlertTriangle, Activity, Hospital, X, Sparkles, Volume2,
+  CheckCircle, AlertTriangle, Activity, Hospital, X, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -334,15 +334,12 @@ const CardioShield = () => {
         </>
       )}
 
-      {/* Instructions */}
+      {/* Preparing (instructions run silently via voice) */}
       {phase === "instructions" && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
-          <div className="flex items-center gap-2 mb-2"><Volume2 className="w-4 h-4 text-primary animate-pulse" />
-            <p className="text-xs font-bold text-foreground">Listen carefully…</p></div>
-          {INSTRUCTIONS.map((t, i) => (
-            <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.3 }}
-              className="text-xs p-3 rounded-xl bg-secondary/30 text-foreground">{i + 1}. {t}</motion.div>
-          ))}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-8 text-center space-y-3">
+          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
+          <p className="text-sm font-bold text-foreground">Getting ready…</p>
+          <p className="text-xs text-muted-foreground">Please hold your phone close to your chest.</p>
         </motion.div>
       )}
 
@@ -414,20 +411,15 @@ const CardioShield = () => {
         </div>
       )}
 
-      {/* Processing */}
+      {/* Processing (technical steps hidden) */}
       {phase === "processing" && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 mb-2"><Loader2 className="w-4 h-4 text-primary animate-spin" />
-            <p className="text-xs font-bold text-foreground">Processing audio…</p></div>
-          {PROCESSING_STEPS.map((s, i) => (
-            <motion.div key={s} initial={{ opacity: 0 }} animate={{ opacity: i < processingStep ? 1 : 0.4 }}
-              className="flex items-center gap-2 p-2.5 rounded-xl bg-secondary/30">
-              {i < processingStep ? <CheckCircle className="w-4 h-4 text-green-500" />
-                : i === processingStep ? <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                : <div className="w-4 h-4 rounded-full border border-muted-foreground/30" />}
-              <span className="text-xs text-foreground">{s}</span>
-            </motion.div>
-          ))}
+        <div className="py-10 text-center space-y-3">
+          <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
+          <p className="text-sm font-bold text-foreground">Analyzing your heart sound…</p>
+          <p className="text-xs text-muted-foreground">This usually takes a few seconds.</p>
+          <div className="h-1.5 max-w-[200px] mx-auto rounded-full bg-secondary/40 overflow-hidden">
+            <div className="h-full bg-primary transition-all" style={{ width: `${(processingStep / PROCESSING_STEPS.length) * 100}%` }} />
+          </div>
         </div>
       )}
 
@@ -458,35 +450,10 @@ const CardioShield = () => {
             </div>
           </div>
 
-          {/* Waveform preview */}
-          <div className="p-3 rounded-2xl bg-secondary/30">
-            <p className="text-[10px] font-bold text-muted-foreground mb-2">WAVEFORM</p>
-            <div className="h-16 flex items-center justify-between gap-[2px]">
-              {waveform.map((v, i) => (
-                <div key={i} className="flex-1 bg-primary/70 rounded-full" style={{ height: `${Math.max(6, v * 100)}%` }} />
-              ))}
-            </div>
-          </div>
-
-          {/* Spectrogram */}
-          <div className="p-3 rounded-2xl bg-secondary/30">
-            <p className="text-[10px] font-bold text-muted-foreground mb-2">SPECTROGRAM</p>
-            <div className="h-20 flex flex-col gap-[1px]">
-              {spectrogram.map((row, ri) => (
-                <div key={ri} className="flex-1 flex gap-[1px]">
-                  {row.map((v, ci) => (
-                    <div key={ci} className="flex-1 rounded-sm"
-                      style={{ background: `hsl(${220 - v * 180}, 80%, ${30 + v * 40}%)` }} />
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Findings */}
           <div className="p-3 rounded-2xl bg-secondary/30">
             <div className="flex items-center gap-2 mb-1"><Activity className="w-3.5 h-3.5 text-primary" />
-              <p className="text-[10px] font-bold text-muted-foreground">AI FINDINGS</p></div>
+              <p className="text-[10px] font-bold text-muted-foreground">WHAT WE FOUND</p></div>
             <p className="text-xs text-foreground leading-relaxed">{result.findings}</p>
           </div>
 
@@ -513,12 +480,6 @@ const CardioShield = () => {
               </div>
             </div>
           )}
-
-          <div className="p-3 rounded-2xl bg-amber-500/5 border border-amber-500/20">
-            <p className="text-[10px] text-foreground leading-relaxed">
-              <span className="font-bold">Disclaimer:</span> This feature is designed for preliminary screening and educational purposes only. It is not a substitute for professional medical diagnosis. Please consult a qualified healthcare professional for medical evaluation.
-            </p>
-          </div>
 
           <Button onClick={reset} variant="outline" className="w-full h-10 rounded-xl text-xs">
             <RotateCcw className="w-4 h-4 mr-1" /> New Recording
