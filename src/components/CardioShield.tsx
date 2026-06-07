@@ -159,6 +159,8 @@ const CardioShield = () => {
   const cueRef = useRef<number | null>(null);
   const playerRef = useRef<HTMLAudioElement | null>(null);
 
+  const localized = result ? RESULTS[result.key][lang] : null;
+
   useEffect(() => {
     return () => cleanup();
   }, []);
@@ -502,18 +504,18 @@ const CardioShield = () => {
             <div className="flex items-center gap-2 mb-2">
               {result.risk_level === "Low" ? <CheckCircle className={`w-5 h-5 ${riskColor}`} />
                 : <AlertTriangle className={`w-5 h-5 ${riskColor}`} />}
-              <h4 className="text-sm font-bold text-foreground">{result.status}</h4>
+              <h4 className="text-sm font-bold text-foreground">{localized?.status}</h4>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Risk Level</span>
-              <span className={`font-bold ${riskColor}`}>{result.risk_level}</span>
+              <span className="text-muted-foreground">{T.riskLevel}</span>
+              <span className={`font-bold ${riskColor}`}>{result.risk_level === "Low" ? T.riskLow : result.risk_level === "Medium" ? T.riskMedium : T.riskHigh}</span>
             </div>
           </div>
 
           {/* Confidence meter */}
           <div className="p-3 rounded-2xl bg-secondary/30">
             <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-muted-foreground">Confidence Score</span>
+              <span className="text-muted-foreground">{T.confidence}</span>
               <span className="font-bold text-foreground">{result.confidence}%</span>
             </div>
             <div className="h-2 rounded-full bg-background overflow-hidden">
@@ -525,14 +527,14 @@ const CardioShield = () => {
           {/* Findings */}
           <div className="p-3 rounded-2xl bg-secondary/30">
             <div className="flex items-center gap-2 mb-1"><Activity className="w-3.5 h-3.5 text-primary" />
-              <p className="text-[10px] font-bold text-muted-foreground">WHAT WE FOUND</p></div>
-            <p className="text-xs text-foreground leading-relaxed">{result.findings}</p>
+              <p className="text-[10px] font-bold text-muted-foreground">{T.whatWeFound}</p></div>
+            <p className="text-xs text-foreground leading-relaxed">{localized?.findings}</p>
           </div>
 
           {/* Recommendations */}
           <div className="p-3 rounded-2xl bg-primary/5 border border-primary/20">
-            <p className="text-[10px] font-bold text-primary mb-1">RECOMMENDED NEXT STEPS</p>
-            <p className="text-xs text-foreground leading-relaxed">{result.recommendations}</p>
+            <p className="text-[10px] font-bold text-primary mb-1">{T.nextSteps}</p>
+            <p className="text-xs text-foreground leading-relaxed">{localized?.recommendations}</p>
           </div>
 
           {/* Hospital assistance for medium/high */}
