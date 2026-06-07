@@ -542,21 +542,21 @@ const CardioShield = () => {
             <div className="p-3 rounded-2xl bg-red-500/5 border border-red-500/20 space-y-2">
               <div className="flex items-center gap-2">
                 <Hospital className="w-4 h-4 text-red-500" />
-                <p className="text-xs font-bold text-foreground">Cardiac care recommended</p>
+                <p className="text-xs font-bold text-foreground">{T.cardiacCare}</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Button onClick={() => navigate("/map")} className="h-9 rounded-xl text-xs bg-red-500 hover:bg-red-600 text-white">
-                  Nearby Hospitals
+                  {T.nearbyHospitals}
                 </Button>
                 <a href="tel:108" className="h-9 rounded-xl text-xs bg-foreground text-background flex items-center justify-center font-semibold">
-                  Emergency Call
+                  {T.emergencyCall}
                 </a>
               </div>
             </div>
           )}
 
           <Button onClick={reset} variant="outline" className="w-full h-10 rounded-xl text-xs">
-            <RotateCcw className="w-4 h-4 mr-1" /> New Recording
+            <RotateCcw className="w-4 h-4 mr-1" /> {T.newRecording}
           </Button>
         </motion.div>
       )}
@@ -571,11 +571,11 @@ const CardioShield = () => {
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-md bg-background rounded-3xl p-5 max-h-[80vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-foreground">Heart Analysis History</h3>
+                <h3 className="font-bold text-foreground">{T.historyTitle}</h3>
                 <button onClick={() => setShowHistory(false)}><X className="w-4 h-4" /></button>
               </div>
               {history.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-6">No previous analyses yet.</p>
+                <p className="text-xs text-muted-foreground text-center py-6">{T.noHistory}</p>
               ) : history.map((h) => (
                 <div key={h.id} className="p-3 rounded-2xl bg-secondary/30 mb-2">
                   <div className="flex items-center justify-between mb-1">
