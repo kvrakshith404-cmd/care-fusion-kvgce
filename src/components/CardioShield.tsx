@@ -475,6 +475,7 @@ const CardioShield = () => {
   const runAnalysis = async () => {
     setPhase("processing");
     setProcessingStep(0);
+    speak(GUIDE[lang].analyzing, sLang);
     // Run real analysis + smooth progress bar in parallel
     const analysisP = analyzeAudioFeatures();
     for (let i = 0; i < PROCESSING_STEPS.length; i++) {
@@ -488,6 +489,9 @@ const CardioShield = () => {
     setSpectrogram(spec);
     setResult(r);
     setPhase("result");
+    const g = GUIDE[lang];
+    const line = r.risk_level === "Low" ? g.resultLow : r.risk_level === "Medium" ? g.resultMed : g.resultHigh;
+    setTimeout(() => speak(line, sLang), 400);
 
     // Save to DB
     const { data: { user } } = await supabase.auth.getUser();
