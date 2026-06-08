@@ -29,7 +29,8 @@ const INSTRUCTIONS = [
   "Recording will begin in 3 seconds.",
 ];
 
-const LIVE_CUES = ["Breathe slowly.", "Remain still.", "Keep the microphone in position.", "Recording in progress.", "Almost complete."];
+// Kept minimal — voice should be calming and unobtrusive, not constant.
+const LIVE_CUES: string[] = [];
 
 const PROCESSING_STEPS = [
   "Noise Reduction",
@@ -40,11 +41,31 @@ const PROCESSING_STEPS = [
   "MFCC Feature Extraction",
 ];
 
+// Pick a soft, natural voice (prefer female English/Hindi/Kannada voices).
+function pickVoice(lang: string): SpeechSynthesisVoice | null {
+  try {
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return null;
+    const langMatch = voices.filter((v) => v.lang?.toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
+    const preferNames = ["samantha", "google", "female", "aria", "jenny", "zira", "neerja", "kalpana", "soft"];
+    for (const name of preferNames) {
+      const v = langMatch.find((x) => x.name.toLowerCase().includes(name));
+      if (v) return v;
+    }
+    return langMatch[0] || voices[0];
+  } catch { return null; }
+}
+
 function speak(text: string, lang: string = "en-US") {
   try {
+    window.speechSynthesis.cancel(); // never overlap — avoids the irritating stacked voice
     const u = new SpeechSynthesisUtterance(text);
     u.lang = lang;
-    u.rate = 0.95;
+    u.rate = 0.9;     // calm pace
+    u.pitch = 1.0;    // natural pitch
+    u.volume = 0.7;   // softer, less startling
+    const v = pickVoice(lang);
+    if (v) u.voice = v;
     window.speechSynthesis.speak(u);
   } catch {}
 }
@@ -182,8 +203,10 @@ const CardioShield = () => {
 
   const startInstructions = async () => {
     setPhase("instructions");
-    INSTRUCTIONS.forEach((t, i) => setTimeout(() => speak(t, sLang), i * 2200));
-    setTimeout(() => beginCountdown(), INSTRUCTIONS.length * 2200);
+    // One short, gentle prompt instead of a long spoken list.
+    const ready = lang === "hi" ? "तैयार रहें।" : lang === "kn" ? "ಸಿದ್ಧರಾಗಿ." : "Get ready.";
+    speak(ready, sLang);
+    setTimeout(() => beginCountdown(), 1500);
   };
 
   const beginCountdown = () => {
@@ -265,14 +288,8 @@ const CardioShield = () => {
     }, 100);
   };
 
-  const runCues = () => {
-    let i = 0;
-    speak(LIVE_CUES[0], sLang);
-    cueRef.current = window.setInterval(() => {
-      i = (i + 1) % LIVE_CUES.length;
-      speak(LIVE_CUES[i], sLang);
-    }, 5000);
-  };
+  // No repeating cues during recording — silence helps capture clean heart sounds.
+  const runCues = () => { /* intentionally silent */ };
 
   const pauseRecording = () => {
     mediaRecorderRef.current?.pause();
@@ -294,7 +311,8 @@ const CardioShield = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (cueRef.current) clearInterval(cueRef.current);
     window.speechSynthesis.cancel();
-    speak("Recording completed.", sLang);
+    const done = lang === "hi" ? "रिकॉर्डिंग पूरी हुई।" : lang === "kn" ? "ರೆಕಾರ್ಡಿಂಗ್ ಪೂರ್ಣಗೊಂಡಿದೆ." : "Recording complete.";
+    speak(done, sLang);
   };
 
   const handleRecordingStop = async () => {
