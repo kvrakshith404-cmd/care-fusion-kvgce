@@ -30,7 +30,42 @@ const INSTRUCTIONS = [
 ];
 
 // Kept minimal — voice should be calming and unobtrusive, not constant.
-const LIVE_CUES: string[] = [];
+// Localized gentle voice guidance lines
+const GUIDE = {
+  en: {
+    welcome: "Place your phone on the left side of your chest, and stay still.",
+    starting: "Recording will begin shortly.",
+    halfway: "Doing great. Keep breathing slowly.",
+    finishing: "Almost done.",
+    done: "Recording complete.",
+    analyzing: "Analyzing your heart sound.",
+    resultLow: "Your heart sounds normal.",
+    resultMed: "Please consult a doctor soon.",
+    resultHigh: "Please see a heart specialist as soon as possible.",
+  },
+  hi: {
+    welcome: "फ़ोन को छाती के बाईं ओर रखें और स्थिर रहें।",
+    starting: "रिकॉर्डिंग जल्द शुरू होगी।",
+    halfway: "बहुत अच्छा। धीरे-धीरे साँस लेते रहें।",
+    finishing: "लगभग पूरा हो गया।",
+    done: "रिकॉर्डिंग पूरी हुई।",
+    analyzing: "आपकी हृदय ध्वनि का विश्लेषण हो रहा है।",
+    resultLow: "आपकी धड़कन सामान्य है।",
+    resultMed: "कृपया जल्द डॉक्टर से मिलें।",
+    resultHigh: "कृपया जल्द हृदय विशेषज्ञ से मिलें।",
+  },
+  kn: {
+    welcome: "ಫೋನ್ ಅನ್ನು ಎದೆಯ ಎಡಭಾಗದಲ್ಲಿ ಇಡಿ ಮತ್ತು ಸ್ಥಿರವಾಗಿರಿ.",
+    starting: "ರೆಕಾರ್ಡಿಂಗ್ ಶೀಘ್ರವೇ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ.",
+    halfway: "ಚೆನ್ನಾಗಿದೆ. ನಿಧಾನವಾಗಿ ಉಸಿರಾಡಿ.",
+    finishing: "ಬಹುತೇಕ ಮುಗಿಯಿತು.",
+    done: "ರೆಕಾರ್ಡಿಂಗ್ ಪೂರ್ಣಗೊಂಡಿದೆ.",
+    analyzing: "ನಿಮ್ಮ ಹೃದಯ ಧ್ವನಿ ವಿಶ್ಲೇಷಿಸಲಾಗುತ್ತಿದೆ.",
+    resultLow: "ನಿಮ್ಮ ಹೃದಯ ಸಾಮಾನ್ಯವಾಗಿದೆ.",
+    resultMed: "ದಯವಿಟ್ಟು ಶೀಘ್ರವೇ ವೈದ್ಯರನ್ನು ಭೇಟಿ ಮಾಡಿ.",
+    resultHigh: "ದಯವಿಟ್ಟು ಶೀಘ್ರವೇ ಹೃದಯ ತಜ್ಞರನ್ನು ಭೇಟಿ ಮಾಡಿ.",
+  },
+};
 
 const PROCESSING_STEPS = [
   "Noise Reduction",
@@ -203,10 +238,10 @@ const CardioShield = () => {
 
   const startInstructions = async () => {
     setPhase("instructions");
-    // One short, gentle prompt instead of a long spoken list.
-    const ready = lang === "hi" ? "तैयार रहें।" : lang === "kn" ? "ಸಿದ್ಧರಾಗಿ." : "Get ready.";
-    speak(ready, sLang);
-    setTimeout(() => beginCountdown(), 1500);
+    const g = GUIDE[lang];
+    speak(g.welcome, sLang);
+    setTimeout(() => speak(g.starting, sLang), 3200);
+    setTimeout(() => beginCountdown(), 5200);
   };
 
   const beginCountdown = () => {
@@ -288,13 +323,23 @@ const CardioShield = () => {
     }, 100);
   };
 
-  // No repeating cues during recording — silence helps capture clean heart sounds.
-  const runCues = () => { /* intentionally silent */ };
+  // Soft guidance at midpoint and just before finish — quiet enough to keep the recording clean.
+  const runCues = () => {
+    const g = GUIDE[lang];
+    const halfMs = (duration / 2) * 1000;
+    const finMs = Math.max(0, (duration - 3)) * 1000;
+    const h = window.setTimeout(() => speak(g.halfway, sLang), halfMs);
+    const f = window.setTimeout(() => speak(g.finishing, sLang), finMs);
+    cueRef.current = h as unknown as number;
+    // Stash second timer on a ref so it gets cleared by cleanup/pause
+    (cueRef as any).second = f;
+  };
 
   const pauseRecording = () => {
     mediaRecorderRef.current?.pause();
     if (timerRef.current) clearInterval(timerRef.current);
-    if (cueRef.current) clearInterval(cueRef.current);
+    if (cueRef.current) clearTimeout(cueRef.current);
+    if ((cueRef as any).second) clearTimeout((cueRef as any).second);
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     setPhase("paused");
   };
@@ -309,10 +354,10 @@ const CardioShield = () => {
     try { mediaRecorderRef.current?.stop(); } catch {}
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     if (timerRef.current) clearInterval(timerRef.current);
-    if (cueRef.current) clearInterval(cueRef.current);
+    if (cueRef.current) clearTimeout(cueRef.current);
+    if ((cueRef as any).second) clearTimeout((cueRef as any).second);
     window.speechSynthesis.cancel();
-    const done = lang === "hi" ? "रिकॉर्डिंग पूरी हुई।" : lang === "kn" ? "ರೆಕಾರ್ಡಿಂಗ್ ಪೂರ್ಣಗೊಂಡಿದೆ." : "Recording complete.";
-    speak(done, sLang);
+    speak(GUIDE[lang].done, sLang);
   };
 
   const handleRecordingStop = async () => {
